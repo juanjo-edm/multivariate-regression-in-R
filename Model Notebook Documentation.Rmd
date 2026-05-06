@@ -1,0 +1,1169 @@
+---
+title: "Model Notebook Documentation"
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 6
+    toc_float: true
+---
+
+# Methodology
+
+This project follows the [CRISP-DM (Cross-Industry Standard Process for Data Mining) methodology,](https://en.wikipedia.org/wiki/Cross-industry_standard_process_for_data_mining) which provides a structured framework for developing machine learning solutions. The methodology is divided into six main phases:
+
+1.  **Business Understanding:** Define the objectives of the regression challenge, understand the expected outputs, and identify the success criteria for the predictive model.
+2.  **Data Understanding:** Explore the training dataset to analyze feature distributions, detect potential anomalies, and understand relationships between variables and the target.
+3.  **Data Preparation:** Perform preprocessing and transformation tasks when necessary, including data cleaning, scaling, and feature engineering to improve model quality.
+4.  **Modeling:** Train and compare multiple regression models using the prepared dataset in order to identify the best predictive approach.
+5.  **Evaluation:** Assess model performance using appropriate regression metrics and validation techniques while monitoring possible overfitting.
+6.  **Deployment:** Generate predictions for the blind test dataset using the final selected model and prepare the results for submission.
+
+## a) Libraries
+
+All libraries used in this notebook are declared here so the rest of the document can remain focused on analysis and modeling rather than setup details.
+
+The following chunk bootstraps the software environment for the notebook. It checks which packages are already available, installs any missing dependency, and then loads the libraries needed for data manipulation, visualization, modeling, and diagnostics.
+
+```{r setup, message=FALSE, warning=FALSE}
+# Define the package set once so the notebook can reproduce itself on a clean machine.
+required_packages <- c(
+  "tidyverse", "tidymodels", "conflicted",
+  "DiagrammeR", "printtree", "glmnet", "ranger", "car"
+)
+
+missing_required_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1))
+]
+
+if (length(missing_required_packages) > 0) {
+  install.packages(missing_required_packages, repos = "https://cloud.r-project.org")
+}
+
+# Load the libraries used throughout the workflow.
+library(tidyverse)
+library(tidymodels)
+library(conflicted)
+library(DiagrammeR)
+library(printtree)
+library(glmnet)
+library(ranger)
+library(car)
+library(broom)
+library(recipes)
+library(rsample)
+library(parsnip)
+library(workflows)
+library(tune)
+library(dials)
+library(yardstick)
+
+
+
+# Resolve common naming conflicts up front so later chunks remain readable.
+conflict_prefer("filter", "dplyr")
+conflict_prefer("lag", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("step", "recipes")
+
+# Keep plots and numeric printing consistent across the notebook.
+theme_set(theme_minimal())
+options(scipen = 999)
+
+
+```
+
+## b) Repository Structure
+
+The repository has been simplified so that the notebook is the main artifact. The only persistent output expected from the analytical flow is the final prediction file stored in `output/`.
+
+The next chunk turns that repository logic into a compact visual map. This helps the reader understand where the raw data enter the process, where the notebook sits, and where the final prediction file is exported.
+
+```{r repository-structure, fig.width=12, fig.height=6}
+# Draw a compact diagram of the project inputs, notebook, and final output.
+DiagrammeR::grViz("
+digraph repo_map {
+  graph [layout = dot, rankdir = LR]
+
+  node [shape = box, style = filled, color = '#BBD7EA', fontname = Helvetica]
+
+  raw [label = 'data/raw\\ntraining_data.csv\\nblind_test_data.csv']
+  notebook [label = 'Model Notebook\\nDocumentation.Rmd']
+  documents [label = 'documents\\nchallenge brief']
+  output [label = 'output\\nblind_test_predictions.csv']
+
+  raw -> notebook [label = 'read + parse + model']
+  documents -> notebook [label = 'business context']
+  notebook -> output [label = 'export predictions']
+}
+")
+```
+
+## c) Notebook Structure
+
+The notebook is organized as a single sequential document. The reader can move from the challenge description to the final prediction file without relying on external helper scripts or user-defined utility modules.
+
+This subsection uses `printtree` on purpose. Because `printtree` renders a tree from a real filesystem path, the notebook first creates a small temporary directory structure that mirrors the logical sections of the document and then asks `printtree` to print that structure. The temporary folders are only a rendering device for documentation; they are not part of the repository and they are not part of the analytical pipeline.
+
+The following chunk builds that temporary hierarchy and then asks `printtree` to render it. The result is a compact map of the notebook sections rather than a persistent project folder.
+
+```{r notebook-structure}
+# Create a temporary directory tree that mirrors the logical organization of the notebook.
+notebook_tree_root <- file.path(tempdir(), "notebook_structure")
+unlink(notebook_tree_root, recursive = TRUE, force = TRUE)
+
+dir.create(file.path(notebook_tree_root, "Methodology", "Libraries"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Methodology", "Repository Structure"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Methodology", "Notebook Structure"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Business Understanding", "Objective"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Data Understanding"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Data Preparation"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Modeling"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Evaluation"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(notebook_tree_root, "Deployment"), recursive = TRUE, showWarnings = FALSE)
+
+# Print the temporary tree so the structure appears as a readable hierarchy in the notebook.
+cat(
+  paste(
+    capture.output(printtree::print_rtree(notebook_tree_root)),
+    collapse = "\n"
+  )
+)
+```
+
+The tree shown below should therefore be read as a conceptual map of the notebook rather than as a persistent project directory. Its role is purely documentary: it helps the reader understand the order and scope of the sections included in this R Markdown file.
+
+# 1) Business Understanding
+
+## 1.1) Objective
+
+The objective of this challenge is to develop a machine learning model capable of predicting a continuous target variable using a multivariate dataset composed of 20 numerical features and a target column. The provided training dataset contains observations with known target values, which are used to train and validate predictive models. Additionally, a blind test dataset is provided without target labels, and the final objective is to generate predictions for those unseen samples.
+
+According to the challenge requirements, the project must include several core machine learning tasks:
+
+1.  The dataset must be analyzed to determine whether preprocessing techniques are necessary, including transformations, scaling, or data cleaning procedures.
+2.  Feature selection methods may be applied to identify the most relevant variables contributing to predictive performance.
+3.  One or multiple regression models must be trained using the training dataset. The challenge also requires performing appropriate validation and evaluation procedures to assess model quality and reduce the risk of overfitting.
+4.  The selected model must be used to generate predictions for the blind test dataset, producing a CSV file containing the estimated target values.
+
+An important aspect of the challenge is the presence of noise in the target variable. The challenge description explicitly states that even the exact noiseless function would only achieve an approximate maximum $R^2$ score of 0.92, indicating the existence of irreducible error in the data generation process. As a result, the project focuses not only on maximizing predictive accuracy but also on ensuring model generalization and robustness through appropriate validation strategies and careful model selection.
+
+# 2) Data Understanding
+
+The goal of this section is not to fit models yet, but to understand whether the data look usable for a linear regression strategy and what issues must be addressed before modeling.
+
+## 2.1) Import data
+
+The first decision in this challenge is to import all columns as character strings. This is important because the files use a non-standard numeric representation with multiple dots inside several values, so reading them directly as numeric would hide data quality problems.
+
+The next chunk imports both raw files as character data. This preserves the original strings exactly as delivered so the numeric recovery rule can be applied transparently in the following steps.
+
+```{r import-data}
+# Keep all fields as character on import so malformed numeric strings are not silently coerced.
+training_data_raw <- read_delim(
+  "data/raw/training_data.csv",
+  delim = ";",
+  col_types = cols(.default = col_character()),
+  trim_ws = TRUE,
+  na = c("", "NA")
+)
+
+blind_test_data_raw <- read_delim(
+  "data/raw/blind_test_data.csv",
+  delim = ";",
+  col_types = cols(.default = col_character()),
+  trim_ws = TRUE,
+  na = c("", "NA")
+)
+```
+
+## 2.2) Structural validation
+
+The challenge statement expects 20 predictors in both files, a target column only in the training set, 800 training observations, and 200 blind test observations. The first validation compares the expected structure against what is actually present in the local files.
+
+The following chunk compares the observed structure of the local files against the challenge specification. This provides an explicit integrity check before any parsing or modeling work begins.
+
+```{r structural-validation}
+# Summarize the expected versus observed shape of both source files.
+structure_check <- tibble(
+  dataset = c("training_data", "blind_test_data"),
+  expected_rows = c(800, 200),
+  observed_rows = c(nrow(training_data_raw), nrow(blind_test_data_raw)),
+  expected_feature_columns = c(20, 20),
+  observed_feature_columns = c(
+    ncol(select(training_data_raw, -target)),
+    ncol(blind_test_data_raw)
+  ),
+  has_target_column = c(
+    "target" %in% names(training_data_raw),
+    "target" %in% names(blind_test_data_raw)
+  )
+)
+
+structure_check
+```
+
+The number of columns matches the challenge specification, but the local training file contains fewer rows than expected. This is a relevant finding because it changes the effective sample size available for model training and suggests a file integrity issue that must be documented before preprocessing.
+
+## 2.3) Type audit and numeric recovery
+
+Before modeling, the dataset must be converted to a usable numeric format. A close inspection of the raw files shows two different conventions:
+
+1.  Standard decimals such as `0.6535918186439443`.
+2.  Values written with several dots, such as `4.324.759.536.476.850`.
+
+For this notebook, multi-dot values are interpreted as numbers with dots used as thousand separators when the pattern matches repeated groups of three digits. Under that rule, `4.324.759.536.476.850` is converted to `4324759536476850`, while values such as `0.6535918186439443` are preserved as ordinary decimals.
+
+The next chunk illustrates that parsing rule on a small example table and then applies the same conversion logic to every column in both datasets. Keeping the rule inside the notebook makes the recovery step easy to audit.
+
+```{r numeric-parser}
+
+# Detect numbers that look like repeated groups of three digits separated by dots.
+thousands_pattern <- "^[+-]?[0-9]{1,3}(\\.[0-9]{3})+$"
+
+# Create simple examples so the parsing rule is visible before it is applied to the full data.
+parser_examples <- tibble(
+  raw_value = c(
+    "4.324.759.536.476.850",
+    "621.368.316.595.869",
+    "0.6535918186439443",
+    "12.5",
+    "",
+    NA_character_
+  )
+) |>
+  mutate(
+    treated_as_grouped_thousands = str_detect(str_trim(raw_value), thousands_pattern),
+    parsed_value = case_when(
+      is.na(raw_value) ~ NA_real_,
+      str_trim(raw_value) == "" ~ NA_real_,
+      str_detect(str_trim(raw_value), thousands_pattern) ~
+        suppressWarnings(as.numeric(str_replace_all(str_trim(raw_value), stringr::fixed("."), ""))),
+      TRUE ~ suppressWarnings(as.numeric(str_trim(raw_value)))
+    )
+  )
+
+parser_examples
+
+# Apply the grouped-thousands rule column by column to the training data.
+training_data <- training_data_raw |>
+  mutate(
+    across(
+      everything(),
+      ~ case_when(
+        is.na(.) ~ NA_real_,
+        str_trim(.) == "" ~ NA_real_,
+        str_detect(str_trim(.), thousands_pattern) ~
+          suppressWarnings(as.numeric(str_replace_all(str_trim(.), stringr::fixed("."), ""))),
+        TRUE ~ suppressWarnings(as.numeric(str_trim(.)))
+      )
+    )
+  )
+
+# Apply the same conversion logic to the blind test data so both tables stay compatible.
+blind_test_data <- blind_test_data_raw |>
+  mutate(
+    across(
+      everything(),
+      ~ case_when(
+        is.na(.) ~ NA_real_,
+        str_trim(.) == "" ~ NA_real_,
+        str_detect(str_trim(.), thousands_pattern) ~
+          suppressWarnings(as.numeric(str_replace_all(str_trim(.), stringr::fixed("."), ""))),
+        TRUE ~ suppressWarnings(as.numeric(str_trim(.)))
+      )
+    )
+  )
+```
+
+The following chunk confirms that the conversion succeeded. It checks whether all columns are numeric and reports how many missing cells remain in each dataset after parsing.
+
+```{r type-check}
+# Verify that both parsed tables are numeric and summarize their remaining missingness.
+type_summary <- tibble(
+  dataset = c("training_data", "blind_test_data"),
+  all_columns_numeric = c(
+    all(sapply(training_data, is.numeric)),
+    all(sapply(blind_test_data, is.numeric))
+  ),
+  missing_cells = c(
+    sum(is.na(training_data)),
+    sum(is.na(blind_test_data))
+  )
+)
+
+type_summary
+```
+
+After this conversion, both tables become fully numeric, which is a necessary condition to continue toward OLS-based modeling.
+
+## 2.4) Data quality findings
+
+In this dataset there are two especially relevant integrity checks: incomplete rows and duplicated observations.
+
+The next chunk quantifies those integrity issues directly. It shows where missing values are concentrated, identifies incomplete training rows, and reports duplicate counts for both files.
+
+```{r data-quality}
+# Count missing values by column so the location of corruption is explicit.
+missing_by_column <- training_data |>
+  summarise(across(everything(), ~ sum(is.na(.x)))) |>
+  pivot_longer(
+    everything(),
+    names_to = "variable",
+    values_to = "missing_values"
+  ) |>
+  filter(missing_values > 0)
+
+incomplete_training_rows <- which(!complete.cases(training_data))
+
+# Combine the main data quality indicators into a compact summary table.
+quality_summary <- tibble(
+  metric = c(
+    "Training rows with any missing value",
+    "Blind test rows with any missing value",
+    "Duplicated training rows",
+    "Duplicated blind test rows"
+  ),
+  value = c(
+    sum(!complete.cases(training_data)),
+    sum(!complete.cases(blind_test_data)),
+    sum(duplicated(training_data_raw)),
+    sum(duplicated(blind_test_data_raw))
+  )
+)
+
+quality_summary
+missing_by_column
+incomplete_training_rows
+```
+
+The main issue is concentrated in the last row of the training file, which is incomplete from `feature_11` onward and also has a missing target. This observation should not be used for supervised training and will need to be excluded in the preparation phase. The blind test file, by contrast, does not show missing values.
+
+For the remainder of the exploratory analysis, a complete-case version of the training data is used only to avoid descriptive summaries being distorted by that truncated row.
+
+The following chunk creates that complete-case training table and stores the predictor names used repeatedly in later summaries and graphics.
+
+```{r complete-case-data}
+# Drop incomplete training rows so one corrupted observation does not distort the exploratory analysis.
+training_data_complete <- training_data |>
+  drop_na()
+
+# Save the predictor names once so later code can refer to them consistently.
+feature_names <- names(training_data_complete) |> setdiff("target")
+```
+
+## 2.5) Descriptive statistics
+
+Following the logic suggested in linear modeling workflows, the first diagnostic is to verify that both the dependent variable and the regressors have variation in the sample. Without variation in $y$ or in the $x$ variables, OLS cannot be informative.
+
+The next chunk computes descriptive statistics for the target and all predictors. These summaries provide a first numerical view of location, spread, and range before the graphical diagnostics.
+
+```{r descriptive-stats}
+# Summarize the target with basic measures of center and dispersion.
+target_summary <- training_data_complete |>
+  summarise(
+    observations = n(),
+    min = min(target),
+    q1 = quantile(target, 0.25),
+    median = median(target),
+    mean = mean(target),
+    q3 = quantile(target, 0.75),
+    max = max(target),
+    sd = sd(target)
+  )
+
+# Summarize each predictor and reshape the result into a long, readable table.
+feature_summary <- training_data_complete |>
+  summarise(
+    across(all_of(feature_names), list(mean = mean, sd = sd, min = min, max = max))
+  ) |>
+  pivot_longer(
+    everything(),
+    names_to = c("feature", ".value"),
+    names_pattern = "(feature_[0-9]+)_(mean|sd|min|max)"
+  ) |>
+  arrange(desc(sd))
+
+target_summary
+feature_summary
+```
+
+## 2.6) Distribution of the target
+
+The target distribution matters because strong skewness, heavy tails, or extreme outliers can later affect residual behavior and the stability of OLS estimates.
+
+The next chunk plots a histogram of the target to assess its overall shape. This gives an early visual impression of skewness, concentration, and tail behavior.
+
+```{r target-distribution, fig.height=4, fig.width=9}
+# Visualize the target distribution before any model is fitted.
+ggplot(training_data_complete, aes(x = target)) +
+  geom_histogram(bins = 30, fill = "#2C7FB8", color = "white") +
+  labs(
+    title = "Distribution of the target variable",
+    x = "target",
+    y = "Frequency"
+  )
+```
+
+This companion chunk adds a boxplot of the same variable. The boxplot is useful for quickly spotting extreme values and summarizing spread in a compact way.
+
+```{r target-boxplot, fig.height=3, fig.width=9}
+# Complement the histogram with a boxplot to highlight spread and potential outliers.
+ggplot(training_data_complete, aes(y = target)) +
+  geom_boxplot(fill = "#7FCDBB", alpha = 0.8) +
+  labs(
+    title = "Boxplot of the target variable",
+    x = NULL,
+    y = "target"
+  )
+```
+
+## 2.7) Distribution of the predictors
+
+Because there are 20 continuous predictors, the most useful view is a faceted set of histograms. This allows us to identify whether the features share a comparable scale, whether some of them are highly skewed, and whether there are unusual tails that may later influence linear fits.
+
+The following chunk reshapes the predictors into long format and draws one histogram per variable. Faceting makes it possible to compare all 20 predictors within a single consistent display.
+
+```{r feature-distributions, fig.height=14, fig.width=12}
+# Pivot the predictors into long format so one plotting command can render all feature panels.
+training_data_complete |>
+  pivot_longer(
+    cols = all_of(feature_names),
+    names_to = "feature",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 30, fill = "#FDAE61", color = "white") +
+  facet_wrap(~ feature, scales = "free", ncol = 4) +
+  labs(
+    title = "Distribution of the 20 predictors",
+    x = "Value",
+    y = "Frequency"
+  )
+```
+
+The next chunk complements the histograms with faceted boxplots. This second view is especially useful for comparing spread and identifying potential outliers across predictors.
+
+```{r feature-boxplots, fig.height=14, fig.width=12}
+# Use faceted boxplots to compare dispersion and outlier behavior across predictors.
+training_data_complete |>
+  pivot_longer(
+    cols = all_of(feature_names),
+    names_to = "feature",
+    values_to = "value"
+  ) |>
+  ggplot(aes(y = value)) +
+  geom_boxplot(fill = "#7FCDBB", alpha = 0.8, outlier.alpha = 0.35) +
+  facet_wrap(~ feature, scales = "free", ncol = 4) +
+  labs(
+    title = "Boxplots of the 20 predictors",
+    x = NULL,
+    y = "Value"
+  )
+```
+
+The features do not appear to share a common scale and several variables show long right tails. This is useful information for the preparation phase because it suggests that scaling may matter for some models.
+
+## 2.8) Relationship between each predictor and the target
+
+Before fitting a full model, it is useful to look at the bivariate relationship between each predictor and the target.
+
+The next chunk computes the Pearson correlation between each predictor and the target, then ranks predictors by the absolute strength of their marginal association.
+
+```{r target-correlations}
+# Rank predictors by their marginal correlation with the target.
+correlation_with_target <- tibble(
+  feature = feature_names,
+  correlation = map_dbl(
+    feature_names,
+    ~ cor(training_data_complete[[.x]], training_data_complete$target)
+  )
+) |>
+  mutate(abs_correlation = abs(correlation)) |>
+  arrange(desc(abs_correlation))
+
+correlation_with_target
+```
+
+This bar chart turns the ranked table into a quick visual comparison of the strongest positive and negative associations.
+
+```{r top-correlations-plot, fig.height=5, fig.width=9}
+# Visualize the ten strongest absolute correlations while preserving their sign.
+correlation_with_target |>
+  slice_head(n = 10) |>
+  ggplot(aes(x = reorder(feature, abs_correlation), y = correlation, fill = correlation > 0)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    title = "Top absolute correlations with the target",
+    x = "Feature",
+    y = "Pearson correlation"
+  )
+```
+
+To inspect linearity more directly, the four predictors with the strongest marginal association with the target are plotted below.
+
+The following chunk selects those four predictors and draws scatterplots with fitted linear trends. This helps assess whether the strongest marginal signals look approximately linear.
+
+```{r top-feature-scatter, fig.height=8, fig.width=10}
+# Select the strongest marginal predictors for a closer visual inspection.
+top_features <- correlation_with_target |>
+  slice_head(n = 4) |>
+  pull(feature)
+
+# Plot each selected predictor against the target with a linear reference line.
+training_data_complete |>
+  pivot_longer(
+    cols = all_of(top_features),
+    names_to = "feature",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = value, y = target)) +
+  geom_point(alpha = 0.45, color = "#2C3E50") +
+  geom_smooth(method = "lm", se = FALSE, color = "#D95F0E") +
+  facet_wrap(~ feature, scales = "free") +
+  labs(
+    title = "Bivariate relationship between the target and the strongest predictors",
+    x = "Predictor value",
+    y = "target"
+  )
+```
+
+## 2.9) Correlation structure among predictors
+
+One of the practical concerns in multiple OLS is multicollinearity. A first pass is to inspect the pairwise correlation matrix among predictors.
+
+The next chunk computes the full predictor correlation matrix, reshapes it into a long table, and extracts the strongest non-diagonal relationships for inspection.
+
+```{r predictor-correlation-matrix}
+# Build the full predictor correlation matrix as a first descriptive check for multicollinearity.
+predictor_correlation_matrix <- cor(training_data_complete |> select(all_of(feature_names)))
+
+# Convert the matrix to long format so it can be filtered, ranked, and plotted.
+predictor_correlation_long <- as_tibble(
+  as.data.frame(as.table(predictor_correlation_matrix), responseName = "correlation")
+) |>
+  rename(feature_1 = Var1, feature_2 = Var2)
+
+max_pairwise_correlation <- predictor_correlation_long |>
+  filter(feature_1 != feature_2) |>
+  mutate(abs_correlation = abs(correlation)) |>
+  arrange(desc(abs_correlation)) |>
+  slice(1:10)
+
+max_pairwise_correlation
+```
+
+This heatmap translates the same correlation matrix into a visual diagnostic. It helps reveal clusters of related predictors more quickly than a raw numeric table.
+
+```{r predictor-heatmap, fig.height=8, fig.width=10}
+# Visualize the pairwise correlation structure to spot broad dependence patterns.
+predictor_correlation_long |>
+  ggplot(aes(x = feature_1, y = feature_2, fill = correlation)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  labs(
+    title = "Pairwise correlation heatmap among predictors",
+    x = NULL,
+    y = NULL,
+    fill = "Correlation"
+  ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+## 2.10) Preliminary assessment of OLS principles
+
+At the end of Data Understanding, we can summarize what has and has not been learned about the suitability of an OLS approach.
+
+**What can already be supported from the data**
+
+1.  **Variation in** $y$ and in the $x$ variables: the target and all predictors vary in the sample, so estimation is possible.
+2.  **Numeric measurement level:** after parsing, all predictors and the target behave as continuous numeric variables, which is compatible with MCO.
+3.  **Absence of perfect multicollinearity:** the correlation matrix does not reveal redundant columns or exact linear duplication among predictors.
+4.  **Potential linear signal:** scatterplots show that a linear approximation can at least be explored, although the marginal relationships are weak.
+
+**What cannot be confirmed yet in this phase**
+
+1.  **Exogeneity / zero conditional mean** $E(u \mid X) = 0$ cannot be verified from observational data using descriptive analysis alone. It will remain a modeling assumption.
+2.  **Homoscedasticity** cannot be properly evaluated without fitting a model and inspecting residuals.
+3.  **Normality of residuals** cannot be assessed yet because residuals do not exist before estimation.
+4.  **Independence of errors** also requires model-based diagnostics and stronger knowledge of the data generating process.
+
+**Main findings from Data Understanding**
+
+1.  The local training file contains fewer rows than expected and includes one truncated observation with missing values from `feature_11` to `target`.
+2.  Both files required a custom numeric parsing step before any statistical analysis, distinguishing thousand-grouped strings from true decimals.
+3.  The target and predictors are continuous and show substantial dispersion.
+4.  Several predictors are right-skewed and live on different scales.
+5.  Individual predictors show only weak marginal linear association with the target.
+6.  There is no sign of perfect multicollinearity at the descriptive stage.
+
+# 3) Data Preparation
+
+This phase transforms the findings from Data Understanding into a model-ready dataset. Because the current files are corrupted, the preparation logic is intentionally simple and transparent so that the same notebook can be rerun quickly when the corrected CSV files arrive.
+
+## 3.1) Preparing model-ready datasets
+
+The preparation stage follows four practical rules:
+
+1.  Keep all original predictors.
+2.  Preserve the parsed numeric representation from Section 2.
+3.  Exclude incomplete rows only from the supervised training dataset.
+4.  Keep the blind test dataset intact so it remains ready for final scoring.
+
+The following chunk translates those rules into model-facing datasets and companion checks. It also prepares quick summaries for row counts, predictor alignment, and simple variance screening.
+
+```{r data-preparation-pipeline}
+# Keep only complete observations in the supervised training data.
+training_data_model <- training_data |>
+  drop_na()
+
+# Preserve the full blind test set so it remains ready for final scoring.
+blind_test_data_model <- blind_test_data
+
+# Record the shape of the prepared datasets after the complete-case step.
+model_data_summary <- tibble(
+  dataset = c("training_data_model", "blind_test_data_model"),
+  rows = c(nrow(training_data_model), nrow(blind_test_data_model)),
+  columns = c(ncol(training_data_model), ncol(blind_test_data_model))
+)
+
+blind_feature_names <- names(blind_test_data_model)
+
+# Check whether the predictor columns line up exactly between training and blind test data.
+column_alignment <- tibble(
+  training_feature_count = length(feature_names),
+  blind_feature_count = length(blind_feature_names),
+  same_feature_names = identical(feature_names, blind_feature_names),
+  missing_in_blind = paste(setdiff(feature_names, blind_feature_names), collapse = ", "),
+  extra_in_blind = paste(setdiff(blind_feature_names, feature_names), collapse = ", ")
+)
+
+# Screen predictor variability without removing columns manually at this stage.
+predictor_sds <- training_data_model |>
+  summarise(across(all_of(feature_names), sd)) |>
+  pivot_longer(
+    everything(),
+    names_to = "feature",
+    values_to = "sd"
+  ) |>
+  mutate(is_zero_variance = sd == 0)
+
+model_data_summary
+column_alignment
+```
+
+## 3.2) Data quality checks carried into modeling
+
+The next chunk brings forward the core integrity checks from the understanding phase. Keeping them visible here makes the preparation stage transparent about the quality of the current files.
+
+```{r preparation-checks}
+# Keep the core integrity checks in view before the notebook moves into modeling.
+structure_check
+quality_summary
+missing_by_column
+```
+
+These checks are intentionally kept visible in the notebook because the project is operating under known data corruption. The notebook should remain honest about that condition while still producing a reusable workflow.
+
+## 3.3) Predictor alignment and variance screening
+
+The following chunk revisits the feature alignment summary and orders predictors by their standard deviation. This provides a lightweight readiness check before recipes take over any automated preprocessing.
+
+```{r predictor-alignment}
+# Reprint the alignment summary and inspect the predictor spread from lowest to highest.
+column_alignment
+
+predictor_sds |>
+  arrange(sd)
+```
+
+No predictor is removed manually here. Instead, zero-variance handling is delegated to the modeling recipe so the same code can react cleanly when the correct files are swapped in.
+
+# 4) Modeling
+
+The modeling stage balances interpretability and predictive performance. OLS is kept as the central MCO baseline, but the workflow also compares regularized linear models and a tree-based method. The code is intentionally explicit, so each candidate model can be read and audited separately.
+
+## 4.1) Train/test split and resampling
+
+The following chunk creates the evaluation backbone of the modeling stage. It reserves a final holdout split, builds cross-validation folds from the training subset, and defines the metric bundle reused across candidate models.
+
+```{r modeling-resampling}
+# Fix the random seed so the split and resampling results are reproducible.
+set.seed(123)
+
+# Reserve a final holdout set while keeping most observations for model development.
+data_split <- initial_split(training_data_model, prop = 0.8)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+folds <- vfold_cv(train_data, v = 3) # Build cross-validation folds from the training split.
+
+# Reuse the same metric bundle across all regression models for a fair comparison.
+metric_set_regression <- metric_set(rmse, mae, rsq)
+```
+
+Here, the cross-validation folds are created from train_data, not from the full dataset, so the test_data remains untouched as a final honest evaluation set. vfold_cv(train_data, v = 3) splits the training portion into 3 folds, which means the model is trained multiple times: each time using 2 folds for training and 1 fold for validation, rotating until every fold has served as validation once. The purpose is to estimate model performance more reliably inside the training data before touching the final test set, so model comparison is less dependent on a single split and more robust to random variation.
+
+## 4.2) Baseline and recipes
+
+The next chunk defines both the naive baseline and the preprocessing recipes used downstream. Separating these objects here makes later modeling chunks easier to read and compare.
+
+```{r modeling-baseline-and-recipes}
+# Use the mean target value as a simple benchmark that every trained model should beat.
+mean_baseline_value <- mean(train_data$target) # Get only the mean
+
+# Table with target and mean_baseline_value
+mean_baseline_predictions <- tibble(
+  truth = test_data$target,
+  .pred = mean_baseline_value
+)
+
+
+# Apply metic sets (rsq is NA here because your baseline predicts the same constant value for every row)
+mean_baseline_metrics <- metric_set_regression(
+  mean_baseline_predictions,
+  truth = truth,
+  estimate = .pred
+) |>
+  mutate(model = "mean_baseline")
+
+# The base recipe only removes predictors with zero variance.
+base_recipe <- recipe(target ~ ., data = train_data) |>
+  step_zv(all_predictors())
+
+# The normalized recipe adds scaling for models that are sensitive to predictor magnitude.
+normalized_recipe <- recipe(target ~ ., data = train_data) |>
+  step_zv(all_predictors()) |>
+  step_normalize(all_predictors())
+```
+
+## 4.3) OLS
+
+The following chunk fits the ordinary least squares baseline. It estimates OLS performance by cross-validation and on the holdout split, then fits the workflow on the full prepared training data for later reuse.
+
+```{r modeling-ols, message=TRUE, warning=FALSE}
+# Define the OLS workflow using the base recipe and the standard lm engine.
+ols_workflow <- workflow() |>
+  add_recipe(base_recipe) |>
+  add_model(linear_reg() |> set_engine("lm"))
+
+# Estimate OLS performance under cross-validation.
+ols_resamples <- fit_resamples(
+  object = ols_workflow,
+  resamples = folds,
+  metrics = metric_set_regression,
+  control = control_resamples(save_pred = TRUE)
+)
+
+# Evaluate the same OLS workflow on the reserved holdout split.
+ols_last_fit <- last_fit(
+  ols_workflow,
+  split = data_split,
+  metrics = metric_set_regression
+)
+
+ols_resample_metrics <- collect_metrics(ols_resamples) |>
+  mutate(model = "ols")
+
+ols_holdout_metrics <- collect_metrics(ols_last_fit) |>
+  mutate(model = "ols")
+
+# Fit OLS on the full prepared training data so the workflow can be reused later.
+ols_fitted_workflow <- fit(ols_workflow, data = training_data_model)
+```
+
+## 4.4) Ridge
+
+The next chunk fits a ridge regression workflow. It tunes the regularization strength over a compact grid, chooses the best setting by RMSE, and then evaluates the finalized model on the holdout split.
+
+```{r modeling-ridge, message=TRUE, warning=FALSE}
+# Ridge shrinks coefficients continuously while keeping all predictors in the model.
+ridge_workflow <- workflow() |>
+  add_recipe(normalized_recipe) |>
+  add_model(
+    linear_reg(penalty = tune(), mixture = 0) |>
+      set_engine("glmnet")
+  )
+
+# Search over a regular grid of candidate penalty values.
+ridge_grid <- grid_regular(
+  penalty(),
+  levels = 6
+)
+
+# Tune the ridge penalty using cross-validation.
+ridge_tune <- tune_grid(
+  object = ridge_workflow,
+  resamples = folds,
+  grid = ridge_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+
+# Finalize the workflow with the penalty value that minimizes RMSE.
+ridge_best_params <- select_best(ridge_tune, metric = "rmse")
+
+ridge_final_workflow <- finalize_workflow(ridge_workflow, ridge_best_params)
+
+ridge_last_fit <- last_fit(
+  ridge_final_workflow,
+  split = data_split,
+  metrics = metric_set_regression
+)
+
+ridge_resample_metrics <- collect_metrics(ridge_tune) |>
+  mutate(model = "ridge")
+
+ridge_holdout_metrics <- collect_metrics(ridge_last_fit) |>
+  mutate(model = "ridge")
+
+# Fit the finalized ridge workflow on the full prepared training data.
+ridge_fitted_workflow <- fit(ridge_final_workflow, data = training_data_model)
+```
+
+## 4.5) Lasso
+
+The following chunk fits a lasso regression workflow. It mirrors the ridge procedure but uses pure L1 regularization, which can shrink some coefficients all the way to zero.
+
+```{r modeling-lasso, message=TRUE, warning=FALSE}
+# Lasso uses pure L1 regularization and can produce sparse coefficient patterns.
+lasso_workflow <- workflow() |>
+  add_recipe(normalized_recipe) |>
+  add_model(
+    linear_reg(penalty = tune(), mixture = 1) |>
+      set_engine("glmnet")
+  )
+
+# Search over a regular grid of candidate penalty values for the lasso model.
+lasso_grid <- grid_regular(
+  penalty(),
+  levels = 6
+)
+
+# Tune the lasso penalty using cross-validation.
+lasso_tune <- tune_grid(
+  object = lasso_workflow,
+  resamples = folds,
+  grid = lasso_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+
+# Finalize the workflow with the penalty value that minimizes RMSE.
+lasso_best_params <- select_best(lasso_tune, metric = "rmse")
+
+lasso_final_workflow <- finalize_workflow(lasso_workflow, lasso_best_params)
+
+lasso_last_fit <- last_fit(
+  lasso_final_workflow,
+  split = data_split,
+  metrics = metric_set_regression
+)
+
+lasso_resample_metrics <- collect_metrics(lasso_tune) |>
+  mutate(model = "lasso")
+
+lasso_holdout_metrics <- collect_metrics(lasso_last_fit) |>
+  mutate(model = "lasso")
+
+# Fit the finalized lasso workflow on the full prepared training data.
+lasso_fitted_workflow <- fit(lasso_final_workflow, data = training_data_model)
+```
+
+## 4.6) Elastic Net
+
+The next chunk fits an elastic net workflow. Unlike ridge and lasso, it tunes both the overall shrinkage strength and the balance between L1 and L2 regularization.
+
+```{r modeling-elastic-net, message=TRUE, warning=FALSE}
+# Elastic net tunes both shrinkage intensity and the blend of L1 and L2 penalties.
+elastic_net_workflow <- workflow() |>
+  add_recipe(normalized_recipe) |>
+  add_model(
+    linear_reg(penalty = tune(), mixture = tune()) |>
+      set_engine("glmnet")
+  )
+
+# Search over a two-dimensional grid of penalty and mixture values.
+elastic_net_grid <- grid_regular(
+  penalty(),
+  mixture(),
+  levels = 4
+)
+
+# Tune the elastic net hyperparameters using cross-validation.
+elastic_net_tune <- tune_grid(
+  object = elastic_net_workflow,
+  resamples = folds,
+  grid = elastic_net_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+
+# Finalize the workflow with the hyperparameter combination that minimizes RMSE.
+elastic_net_best_params <- select_best(elastic_net_tune, metric = "rmse")
+
+elastic_net_final_workflow <- finalize_workflow(
+  elastic_net_workflow,
+  elastic_net_best_params
+)
+
+elastic_net_last_fit <- last_fit(
+  elastic_net_final_workflow,
+  split = data_split,
+  metrics = metric_set_regression
+)
+
+elastic_net_resample_metrics <- collect_metrics(elastic_net_tune) |>
+  mutate(model = "elastic_net")
+
+elastic_net_holdout_metrics <- collect_metrics(elastic_net_last_fit) |>
+  mutate(model = "elastic_net")
+
+# Fit the finalized elastic net workflow on the full prepared training data.
+elastic_net_fitted_workflow <- fit(elastic_net_final_workflow, data = training_data_model)
+```
+
+## 4.7) Random Forest
+
+The following chunk adds a tree-based benchmark that can capture non-linear structure and interactions more flexibly than the linear models. It defines a compact tuning space, evaluates candidate forests, and keeps the best final workflow.
+
+```{r modeling-random-forest, message=TRUE, warning=FALSE}
+# Define a valid tuning range for the forest hyperparameters given the available predictors.
+random_forest_parameters <- parameters(
+  mtry(range = c(1L, max(1L, ncol(train_data) - 1L))),
+  min_n()
+) |>
+  finalize(select(train_data, -target))
+
+# Build the random forest workflow with the base recipe because trees do not require normalization.
+random_forest_workflow <- workflow() |>
+  add_recipe(base_recipe) |>
+  add_model(
+    rand_forest(
+      mtry = tune(),
+      min_n = tune(),
+      trees = 300
+    ) |>
+      set_mode("regression") |>
+      set_engine("ranger", importance = "impurity")
+  )
+
+# Keep the search grid compact so the notebook remains reasonably fast to rerun.
+random_forest_grid <- grid_regular(
+  random_forest_parameters,
+  levels = 2
+) |>
+  slice_head(n = 6)
+
+# Tune the forest hyperparameters with cross-validation.
+random_forest_tune <- tune_grid(
+  object = random_forest_workflow,
+  resamples = folds,
+  grid = random_forest_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+
+# Finalize the workflow with the hyperparameters that minimize RMSE.
+random_forest_best_params <- select_best(random_forest_tune, metric = "rmse")
+
+random_forest_final_workflow <- finalize_workflow(
+  random_forest_workflow,
+  random_forest_best_params
+)
+
+random_forest_last_fit <- last_fit(
+  random_forest_final_workflow,
+  split = data_split,
+  metrics = metric_set_regression
+)
+
+random_forest_resample_metrics <- collect_metrics(random_forest_tune) |>
+  mutate(model = "random_forest")
+
+random_forest_holdout_metrics <- collect_metrics(random_forest_last_fit) |>
+  mutate(model = "random_forest")
+
+# Fit the finalized forest on the full prepared training data.
+random_forest_fitted_workflow <- fit(random_forest_final_workflow, data = training_data_model)
+```
+
+## 4.8) Model comparison
+
+The next chunk consolidates the metrics produced by every candidate model, builds an RMSE leaderboard, and selects the workflow that will be used in the deployment section.
+
+```{r modeling-comparison}
+# Combine all resample and holdout metrics into a single object for later reporting.
+training_results <- list(
+  resample_metrics = bind_rows(
+    ols_resample_metrics,
+    ridge_resample_metrics,
+    lasso_resample_metrics,
+    elastic_net_resample_metrics,
+    random_forest_resample_metrics
+  ),
+  holdout_metrics = bind_rows(
+    mean_baseline_metrics,
+    ols_holdout_metrics,
+    ridge_holdout_metrics,
+    lasso_holdout_metrics,
+    elastic_net_holdout_metrics,
+    random_forest_holdout_metrics
+  )
+)
+
+# Rank non-baseline models by holdout RMSE so the best workflow can be chosen consistently.
+leaderboard <- training_results$holdout_metrics |>
+  filter(.metric == "rmse", model != "mean_baseline") |>
+  arrange(.estimate) |>
+  select(model, .metric, .estimate, .config)
+
+best_model_name <- leaderboard |>
+  slice(1) |>
+  pull(model)
+
+# Map the best model name back to the fitted workflow object used for final scoring.
+if (best_model_name == "ols") {
+  best_model_workflow <- ols_fitted_workflow
+} else if (best_model_name == "ridge") {
+  best_model_workflow <- ridge_fitted_workflow
+} else if (best_model_name == "lasso") {
+  best_model_workflow <- lasso_fitted_workflow
+} else if (best_model_name == "elastic_net") {
+  best_model_workflow <- elastic_net_fitted_workflow
+} else {
+  best_model_workflow <- random_forest_fitted_workflow
+}
+
+training_results$leaderboard <- leaderboard
+training_results$best_model_name <- best_model_name
+
+leaderboard
+```
+
+# 5) Evaluation
+
+Evaluation focuses on generalization rather than in-sample fit. Because the available data are corrupted, every result in this section should be interpreted as provisional, but the evaluation framework itself is reusable.
+
+## 5.1) Comparative metrics
+
+The next chunk prints the holdout metrics for every candidate model. This is the main table for comparing out-of-sample performance under the current data conditions.
+
+```{r evaluation-metrics}
+# Order the holdout metrics so model-by-model comparisons are easy to scan.
+training_results$holdout_metrics |>
+  arrange(model, .metric)
+```
+
+This companion chunk reports the cross-validated metrics collected during resampling. It helps distinguish average resampling behavior from the final holdout estimates.
+
+```{r evaluation-resample-metrics}
+# Show the cross-validated metrics gathered during model tuning and resampling.
+training_results$resample_metrics |>
+  arrange(model, .metric)
+```
+
+## 5.2) OLS diagnostics and MCO principles
+
+Even if OLS is not the best predictive model, it remains the central diagnostic reference because it links directly to the MCO principles discussed in Section 2.
+
+The following chunk fits a plain `lm()` object for classical regression diagnostics. It augments the fitted model with residual information and computes VIF values to support the discussion of MCO assumptions.
+
+```{r ols-diagnostics-build}
+# Fit a plain OLS model so classical residual diagnostics can be produced directly.
+ols_model <- lm(target ~ ., data = training_data_model)
+
+# Add fitted values and residual diagnostics needed for later plots.
+ols_diagnostics <- augment(ols_model)
+
+# Compute variance inflation factors as a descriptive check on multicollinearity.
+ols_vif <- tibble(
+  feature = names(car::vif(ols_model)),
+  vif = as.numeric(car::vif(ols_model))
+) |>
+  arrange(desc(vif))
+
+head(ols_diagnostics)
+ols_vif
+```
+
+### 5.2.1) Residuals vs fitted
+
+The next chunk draws the residuals-versus-fitted plot. This diagnostic is used to look for patterns that may suggest non-linearity or changing residual variance.
+
+```{r ols-residuals-fitted, fig.height=4, fig.width=8}
+# Plot residuals against fitted values to check for structure that OLS should not leave behind.
+ggplot(ols_diagnostics, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.45, color = "#2C3E50") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#D95F0E") +
+  labs(
+    title = "OLS residuals vs fitted values",
+    x = "Fitted values",
+    y = "Residuals"
+  )
+```
+
+### 5.2.2) Normal Q-Q
+
+The following chunk produces a normal Q-Q plot for standardized residuals. This plot helps assess whether the residual distribution departs strongly from normality.
+
+```{r ols-qqplot, fig.height=4, fig.width=8}
+# Compare standardized residuals against theoretical normal quantiles.
+ggplot(ols_diagnostics, aes(sample = .std.resid)) +
+  stat_qq(color = "#2C3E50", alpha = 0.5) +
+  stat_qq_line(color = "#D95F0E") +
+  labs(
+    title = "Normal Q-Q plot for standardized residuals",
+    x = "Theoretical quantiles",
+    y = "Standardized residuals"
+  )
+```
+
+### 5.2.3) Scale-location style diagnostic
+
+The next chunk creates a scale-location style plot. Its purpose is to inspect whether residual spread changes systematically across the range of fitted values.
+
+```{r ols-scale-location, fig.height=4, fig.width=8}
+# Plot the square root of the absolute standardized residuals against fitted values.
+ggplot(
+  ols_diagnostics,
+  aes(x = .fitted, y = sqrt(abs(.std.resid)))
+) +
+  geom_point(alpha = 0.45, color = "#2C3E50") +
+  labs(
+    title = "Scale-location diagnostic",
+    x = "Fitted values",
+    y = "Sqrt(|standardized residuals|)"
+  )
+```
+
+# 6) Deployment
+
+The last phase operationalizes the final deliverable of the challenge: a CSV with blind test predictions in a single column named `target_pred`.
+
+## 6.1) Final blind test scoring
+
+The final analytical chunk generates the submission-ready prediction file. It creates the output directory if needed, scores the blind test dataset with the selected workflow, and exports the results in the one-column format required by the challenge.
+
+```{r deployment-predictions}
+# Create the output directory if it does not already exist.
+dir.create("output", recursive = TRUE, showWarnings = FALSE)
+
+# Score the blind test rows and rename the prediction column to the expected submission label.
+blind_test_predictions <- predict(best_model_workflow, new_data = blind_test_data_model) |>
+  rename(target_pred = .pred)
+
+# Export the predictions in the exact single-column CSV format expected for submission.
+write_csv(blind_test_predictions, "output/blind_test_predictions.csv")
+
+head(blind_test_predictions)
+```
+
+The exported file is now saved as `output/blind_test_predictions.csv`, and it is ready for submission after checking that the corrected raw data have been swapped in.
+
+
