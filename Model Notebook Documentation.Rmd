@@ -80,6 +80,10 @@ options(scipen = 999)
 
 The repository has been simplified so that the notebook is the main artifact. The only persistent output expected from the analytical flow is the final prediction file stored in `output/`.
 
+```{r}
+printtree::print_rtree()
+```
+
 The next chunk turns that repository logic into a compact visual map. This helps the reader understand where the raw data enter the process, where the notebook sits, and where the final prediction file is exported.
 
 ```{r repository-structure, fig.width=12, fig.height=6}
@@ -135,6 +139,8 @@ cat(
 ```
 
 The tree shown below should therefore be read as a conceptual map of the notebook rather than as a persistent project directory. Its role is purely documentary: it helps the reader understand the order and scope of the sections included in this R Markdown file.
+
+The same sequential organization also clarifies how model selection is handled from start to finish. Section 4 first evaluates alternative variants inside each model family, then stores those internal summaries in `variant_leaderboards`. After that, Section 4.8 compares only the family winners through the cross-validated ranking stored in `family_cv_leaderboard`, promotes the top family to `best_model_name`, and maps that result to `best_model_workflow` for final blind-test scoring. Only after that family-level choice has already been made does the notebook use `last_fit()` once on the reserved holdout split to populate `training_results$winning_holdout_metrics`. In this way, the notebook keeps feature engineering and tuning decisions inside the modeling stage while preserving a single documented handoff into deployment.
 
 # 1) Business Understanding
 
@@ -614,7 +620,7 @@ At the end of Data Understanding, we can summarize what has and has not been lea
 **What can already be supported from the data**
 
 1.  **Variation in** $y$ and in the $x$ variables: the target and all predictors vary in the sample, so estimation is possible.
-2.  **Numeric measurement level:** after conversion from the raw character import, all predictors and the target behave as continuous numeric variables, which is compatible with MCO.
+2.  **Numeric measurement level:** after conversion from the raw character import, all predictors and the target behave as continuous numeric variables, which is compatible with OLS.
 3.  **Absence of perfect multicollinearity:** the correlation matrix does not reveal redundant columns or exact linear duplication among predictors.
 4.  **Potential linear signal:** scatterplots show that a linear approximation can be explored, with the strongest marginal signal concentrated in a subset of predictors rather than spread uniformly across all variables.
 
@@ -636,7 +642,7 @@ At the end of Data Understanding, we can summarize what has and has not been lea
 
 # 3) Data Preparation
 
-This phase transforms the findings from Data Understanding into a model-ready dataset. Because the current files already satisfy the structural checks, the preparation logic can stay intentionally simple and transparent while remaining reusable for future file versions.
+This phase transforms the findings from Data Understanding into a model-ready dataset. The preparation logic can stay intentionally simple and transparent while remaining reusable for future model versions.
 
 ## 3.1) Preparing model-ready datasets
 
@@ -717,7 +723,7 @@ No predictor is removed manually here. Instead, zero-variance handling is delega
 
 # 4) Modeling
 
-The modeling stage balances interpretability and predictive performance. OLS is kept as the central MCO baseline, but the workflow also compares regularized linear models and a tree-based method. The code is intentionally explicit, so each candidate model can be read and audited separately.
+The modeling stage balances interpretability and predictive performance. OLS is kept as the central baseline, but the workflow also compares regularized linear models and a tree-based method. The code is intentionally explicit, so each candidate model can be read and audited separately.
 
 ## 4.1) Train/test split and resampling
 
@@ -727,23 +733,29 @@ The following chunk creates the evaluation backbone of the modeling stage. It re
 # Fix the random seed so the split and resampling results are reproducible.
 set.seed(123)
 
-# Reserve a final holdout set while keeping most observations for model development.
-data_split <- initial_split(training_data_model, prop = 0.8)
+# Reserve a final stratified holdout set while keeping most observations for model development.
+data_split <- initial_split(training_data_model, prop = 0.8, strata = target)
 train_data <- training(data_split)
 test_data <- testing(data_split)
-folds <- vfold_cv(train_data, v = 3) # Build cross-validation folds from the training split.
+folds <- vfold_cv(train_data, v = 5, strata = target) # Build stratified cross-validation folds from the training split.
 
 # Reuse the same metric bundle across all regression models for a fair comparison.
 metric_set_regression <- metric_set(rmse, mae, rsq)
 ```
 
-Here, the cross-validation folds are created from train_data, not from the full dataset, so the test_data remains untouched as a final honest evaluation set. vfold_cv(train_data, v = 3) splits the training portion into 3 folds, which means the model is trained multiple times: each time using 2 folds for training and 1 fold for validation, rotating until every fold has served as validation once. The purpose is to estimate model performance more reliably inside the training data before touching the final test set, so model comparison is less dependent on a single split and more robust to random variation.
+An 80/20 split was selected to preserve most observations for model training while still reserving a sufficiently large holdout set for final evaluation. Because the target is continuous, both the initial split and the resampling folds are stratified on `target` so the outcome distribution remains more stable across partitions. This follows the data-spending and resampling guidance in *Tidy Modeling with R*, where the test set is held in reserve and the training set is the substrate for model development ([splitting](https://www.tmwr.org/splitting.html), [resampling](https://www.tmwr.org/resampling.html)).
+
+Here, the cross-validation folds are created from `train_data`, not from the full dataset, so the `test_data` remains untouched until a final workflow has already been chosen. `vfold_cv(train_data, v = 5, strata = target)` creates five stratified folds, meaning the model is fit multiple times on analysis subsets and evaluated on separate assessment subsets. This mirrors the empirical validation workflow emphasized in *Tidy Modeling with R*: resampling is used to compare candidate models, while the holdout set is reserved for one final check of the chosen winner ([resampling](https://www.tmwr.org/resampling.html), [performance](https://www.tmwr.org/performance)).
 
 ## 4.2) Baseline and recipes
 
-The next chunk defines both the naive baseline and the preprocessing recipes used downstream. Separating these objects here makes later modeling chunks easier to read and compare.
+This subsection separates the modeling foundation into two complementary pieces. First, it defines a naive benchmark that every trained workflow should be able to beat. Second, it formalizes the preprocessing recipes reused across model families so that each estimator can compete under the transformations that are most defensible for its learning mechanism.
 
-```{r modeling-baseline-and-recipes}
+### 4.2.1) Baseline
+
+The first chunk creates a mean baseline using only the average target value from `train_data`. This reference model ignores all predictors and therefore establishes the minimum predictive standard that the supervised workflows should improve upon on the reserved holdout split.
+
+```{r modeling-baseline}
 # Use the mean target value as a simple benchmark that every trained model should beat.
 mean_baseline_value <- mean(train_data$target) # Get only the mean
 
@@ -754,14 +766,29 @@ mean_baseline_predictions <- tibble(
 )
 
 
-# Apply metic sets (rsq is NA here because your baseline predicts the same constant value for every row)
-mean_baseline_metrics <- metric_set_regression(
-  mean_baseline_predictions,
-  truth = truth,
-  estimate = .pred
+# Compute the numeric baseline metrics directly and append an explicit NA for R-squared.
+mean_baseline_metrics <- bind_rows(
+  yardstick::metric_set(rmse, mae)(
+    mean_baseline_predictions,
+    truth = truth,
+    estimate = .pred
+  ),
+  tibble(
+    .metric = "rsq",
+    .estimator = "standard",
+    .estimate = NA_real_
+  )
 ) |>
   mutate(model = "mean_baseline")
+```
 
+Because the mean baseline predicts the same constant value for every observation, its `R-squared` value is expected to be `NA`. Even so, its `RMSE` and `MAE` remain useful as a transparent lower-bound benchmark for the trained models evaluated later in the notebook.
+
+### 4.2.2) Recipes
+
+The next chunk defines the preprocessing recipes shared across model families. The `base_recipe` only filters zero-variance predictors, the `normalized_recipe` adds scaling for models that are sensitive to predictor magnitude, and the `pca_recipe` applies unsupervised dimensionality reduction after standardization. As discussed in *Tidy Modeling with R*, these steps are part of the modeling workflow rather than a separate pre-model stage ([workflows](https://www.tmwr.org/workflows.html)). In this notebook, PCA remains a pragmatic model-dependent feature engineering option, but the retained dimensionality is fixed through the Kaiser criterion computed from the standardized `train_data`.
+
+```{r modeling-recipes}
 # The base recipe only removes predictors with zero variance.
 base_recipe <- recipe(target ~ ., data = train_data) |>
   step_zv(all_predictors())
@@ -770,50 +797,147 @@ base_recipe <- recipe(target ~ ., data = train_data) |>
 normalized_recipe <- recipe(target ~ ., data = train_data) |>
   step_zv(all_predictors()) |>
   step_normalize(all_predictors())
+
+# Estimate PCA outside the recipe so the Kaiser criterion can fix the retained dimensionality.
+predictor_matrix <- train_data |>
+  select(-target) |>
+  scale(center = TRUE, scale = TRUE)
+
+predictor_pca_fit <- prcomp(predictor_matrix, center = FALSE, scale. = FALSE)
+predictor_eigenvalues <- predictor_pca_fit$sdev^2
+kaiser_num_comp <- sum(predictor_eigenvalues > 1)
+
+pca_kaiser_summary <- tibble(
+  kaiser_num_comp = kaiser_num_comp,
+  total_predictors = ncol(predictor_matrix),
+  variance_explained_by_retained_components =
+    sum(predictor_eigenvalues[predictor_eigenvalues > 1]) / sum(predictor_eigenvalues)
+)
+
+# The PCA recipe now uses the fixed Kaiser component count after standardization.
+pca_recipe <- recipe(target ~ ., data = train_data) |>
+  step_zv(all_predictors()) |>
+  step_normalize(all_predictors()) |>
+  step_pca(all_predictors(), num_comp = kaiser_num_comp)
+
+pca_kaiser_summary
 ```
+
+The model variants compared below follow two methodological rules. First, no subsets supervised by the target are used at this stage; the notebook only tests workflow variants based on unsupervised preprocessing choices that can be estimated cleanly inside resampling. Second, internal variant selection is decided by cross-validation rather than by holdout performance, so the reserved test split remains available for a single final validation of the selected workflow. PCA remains a model-dependent feature engineering option, but the number of retained components is fixed by the Kaiser criterion after standardization of `train_data` as a pragmatic stability choice, even though the more consequential TMWR-aligned correction in this notebook is moving final family selection away from the holdout set ([workflows](https://www.tmwr.org/workflows.html), [resampling](https://www.tmwr.org/resampling.html)).
 
 ## 4.3) OLS
 
-The following chunk fits the ordinary least squares baseline. It estimates OLS performance by cross-validation and on the holdout split, then fits the workflow on the full prepared training data for later reuse.
+Ordinary Least Squares (OLS) models the target as a linear combination of the predictors,
 
-```{r modeling-ols, message=TRUE, warning=FALSE}
-# Define the OLS workflow using the base recipe and the standard lm engine.
-ols_workflow <- workflow() |>
+$$
+y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} + \varepsilon_i,
+$$
+
+and estimates the coefficient vector by minimizing the residual sum of squares,
+
+$$
+\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2.
+$$
+
+This makes OLS the most direct linear benchmark in the notebook: it preserves a fully interpretable relationship between predictors and response, and it also provides the classical regression reference used later for residual diagnostics and assumption checks.
+
+OLS was considered because the challenge involves a continuous target and entirely numerical predictors, so a linear baseline is both natural and informative. Even if a more flexible model eventually wins, OLS helps quantify how much predictive signal can be captured by a simple additive structure and serves as a transparent benchmark against which more complex methods can justify their added complexity.
+
+### 4.3.1) OLS with original predictors
+
+The first OLS variant uses the original predictors after only removing zero-variance columns. This is the most direct specification and serves as the baseline linear workflow within the OLS family.
+
+```{r modeling-ols-raw, message=TRUE, warning=FALSE}
+# Define the OLS workflow that keeps the original predictor space.
+ols_raw_workflow <- workflow() |>
   add_recipe(base_recipe) |>
   add_model(linear_reg() |> set_engine("lm"))
 
-# Estimate OLS performance under cross-validation.
-ols_resamples <- fit_resamples(
-  object = ols_workflow,
+# Estimate the raw OLS workflow under cross-validation.
+ols_raw_resamples <- fit_resamples(
+  object = ols_raw_workflow,
   resamples = folds,
   metrics = metric_set_regression,
   control = control_resamples(save_pred = TRUE)
 )
+```
 
-# Evaluate the same OLS workflow on the reserved holdout split.
-ols_last_fit <- last_fit(
-  ols_workflow,
-  split = data_split,
-  metrics = metric_set_regression
+### 4.3.2) OLS with PCA-based feature engineering
+
+The second OLS variant applies PCA after normalization so the linear model can be evaluated on a reduced feature space. This follows the workflow-based preprocessing logic recommended in *Tidy Modeling with R*, where feature engineering is estimated only from the training data inside resampling. In this notebook, the PCA dimensionality is fixed using the Kaiser criterion computed from the standardized predictor space.
+
+```{r modeling-ols-pca, message=TRUE, warning=FALSE}
+# Define the OLS workflow that uses PCA-based feature engineering.
+ols_pca_workflow <- workflow() |>
+  add_recipe(pca_recipe) |>
+  add_model(linear_reg() |> set_engine("lm"))
+
+# Estimate the PCA-enhanced OLS workflow under cross-validation.
+ols_pca_resamples <- fit_resamples(
+  object = ols_pca_workflow,
+  resamples = folds,
+  metrics = metric_set_regression,
+  control = control_resamples(save_pred = TRUE)
+)
+```
+
+### 4.3.3) OLS variant selection
+
+The next chunk compares the raw and PCA-based OLS workflows using cross-validated RMSE, selects the best OLS variant, and then fits that workflow on the full prepared training data for later reuse. Following the *Tidy Modeling with R* resampling workflow, the holdout set is not used at this stage.
+
+```{r modeling-ols-selection, message=TRUE, warning=FALSE}
+# Collect the candidate OLS variants in a single object for internal comparison.
+ols_variant_resamples <- bind_rows(
+  collect_metrics(ols_raw_resamples) |>
+    mutate(model = "ols", variant = "raw"),
+  collect_metrics(ols_pca_resamples) |>
+    mutate(model = "ols", variant = "pca")
 )
 
-ols_resample_metrics <- collect_metrics(ols_resamples) |>
-  mutate(model = "ols")
+# Rank OLS variants by cross-validated RMSE so only the winner reaches the holdout set.
+ols_variant_leaderboard <- ols_variant_resamples |>
+  filter(.metric == "rmse") |>
+  arrange(mean) |>
+  select(model, variant, .metric, mean, std_err)
 
-ols_holdout_metrics <- collect_metrics(ols_last_fit) |>
-  mutate(model = "ols")
+ols_best_variant_name <- ols_variant_leaderboard |>
+  slice(1) |>
+  pull(variant)
 
-# Fit OLS on the full prepared training data so the workflow can be reused later.
-ols_fitted_workflow <- fit(ols_workflow, data = training_data_model)
+# Map the winning OLS variant back to a workflow object that can be finalized and evaluated.
+if (ols_best_variant_name == "raw") {
+  ols_best_workflow <- ols_raw_workflow
+} else {
+  ols_best_workflow <- ols_pca_workflow
+}
+
+ols_resample_metrics <- ols_variant_resamples
+
+# Fit the winning OLS workflow on the full prepared training data for later reuse.
+ols_fitted_workflow <- fit(ols_best_workflow, data = training_data_model)
+
+ols_variant_leaderboard
 ```
 
 ## 4.4) Ridge
 
-The next chunk fits a ridge regression workflow. It tunes the regularization strength over a compact grid, chooses the best setting by RMSE, and then evaluates the finalized model on the holdout split.
+Ridge regression keeps the same linear predictor as OLS but adds an $L_2$ penalty that shrinks coefficients toward zero,
 
-```{r modeling-ridge, message=TRUE, warning=FALSE}
+$$
+\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \sum_{j=1}^{p} \beta_j^2,
+$$
+
+where $\lambda \ge 0$ controls the strength of regularization. The penalty does not remove predictors entirely, but it reduces coefficient magnitude and can stabilize estimation when predictors are correlated or when the unregularized linear fit is too variable.
+
+Ridge was considered because this challenge includes many numerical predictors that may share overlapping information. It offers a conservative extension of OLS: if multicollinearity or coefficient instability harms generalization, ridge can improve predictive performance while preserving the overall linear structure of the model.
+
+### 4.4.1) Ridge with normalized predictors
+
+The first ridge variant uses normalized predictors without changing the dimensionality of the feature space. This is the standard preprocessing path for a scale-sensitive regularized linear model.
+
+```{r modeling-ridge-normalized, message=TRUE, warning=FALSE}
 # Ridge shrinks coefficients continuously while keeping all predictors in the model.
-ridge_workflow <- workflow() |>
+ridge_norm_workflow <- workflow() |>
   add_recipe(normalized_recipe) |>
   add_model(
     linear_reg(penalty = tune(), mixture = 0) |>
@@ -826,43 +950,107 @@ ridge_grid <- grid_regular(
   levels = 6
 )
 
-# Tune the ridge penalty using cross-validation.
-ridge_tune <- tune_grid(
-  object = ridge_workflow,
+# Tune ridge with normalized predictors using cross-validation.
+ridge_norm_tune <- tune_grid(
+  object = ridge_norm_workflow,
   resamples = folds,
   grid = ridge_grid,
   metrics = metric_set_regression,
   control = control_grid(save_pred = TRUE)
 )
+```
 
-# Finalize the workflow with the penalty value that minimizes RMSE.
-ridge_best_params <- select_best(ridge_tune, metric = "rmse")
+### 4.4.2) Ridge with normalized PCA predictors
 
-ridge_final_workflow <- finalize_workflow(ridge_workflow, ridge_best_params)
+The second ridge variant combines normalization with PCA so the model can be evaluated on a reduced feature basis. This provides a conservative way to test feature engineering without using supervised subsets, while keeping the PCA dimensionality fixed by the Kaiser criterion after standardization.
 
-ridge_last_fit <- last_fit(
-  ridge_final_workflow,
-  split = data_split,
-  metrics = metric_set_regression
+```{r modeling-ridge-pca, message=TRUE, warning=FALSE}
+# Define the ridge workflow that combines normalization and PCA.
+ridge_pca_workflow <- workflow() |>
+  add_recipe(pca_recipe) |>
+  add_model(
+    linear_reg(penalty = tune(), mixture = 0) |>
+      set_engine("glmnet")
+  )
+
+# Search over a smaller penalty grid while keeping the PCA dimensionality fixed.
+ridge_pca_grid <- grid_regular(
+  penalty(),
+  levels = 4
 )
 
-ridge_resample_metrics <- collect_metrics(ridge_tune) |>
-  mutate(model = "ridge")
+# Tune ridge with PCA-based features using cross-validation.
+ridge_pca_tune <- tune_grid(
+  object = ridge_pca_workflow,
+  resamples = folds,
+  grid = ridge_pca_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+```
 
-ridge_holdout_metrics <- collect_metrics(ridge_last_fit) |>
-  mutate(model = "ridge")
+### 4.4.3) Ridge variant selection
 
-# Fit the finalized ridge workflow on the full prepared training data.
-ridge_fitted_workflow <- fit(ridge_final_workflow, data = training_data_model)
+The following chunk selects the best ridge variant by cross-validated RMSE and then fits it on the full prepared training data. The reserved holdout split remains untouched until the notebook has already chosen a final family winner.
+
+```{r modeling-ridge-selection, message=TRUE, warning=FALSE}
+# Combine ridge variants into a single leaderboard for internal comparison.
+ridge_variant_resamples <- bind_rows(
+  collect_metrics(ridge_norm_tune) |>
+    mutate(model = "ridge", variant = "normalized"),
+  collect_metrics(ridge_pca_tune) |>
+    mutate(model = "ridge", variant = "pca")
+)
+
+# Rank ridge variants by cross-validated RMSE.
+ridge_variant_leaderboard <- ridge_variant_resamples |>
+  filter(.metric == "rmse") |>
+  group_by(model, variant) |>
+  slice_min(order_by = mean, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(mean) |>
+  select(model, variant, .metric, mean, std_err, .config)
+
+ridge_best_variant_name <- ridge_variant_leaderboard |>
+  slice(1) |>
+  pull(variant)
+
+# Finalize the winning ridge workflow before holdout evaluation.
+if (ridge_best_variant_name == "normalized") {
+  ridge_best_params <- select_best(ridge_norm_tune, metric = "rmse")
+  ridge_best_workflow <- finalize_workflow(ridge_norm_workflow, ridge_best_params)
+} else {
+  ridge_best_params <- select_best(ridge_pca_tune, metric = "rmse")
+  ridge_best_workflow <- finalize_workflow(ridge_pca_workflow, ridge_best_params)
+}
+
+ridge_resample_metrics <- ridge_variant_resamples
+
+# Fit the winning ridge workflow on the full prepared training data.
+ridge_fitted_workflow <- fit(ridge_best_workflow, data = training_data_model)
+
+ridge_variant_leaderboard
 ```
 
 ## 4.5) Lasso
 
-The following chunk fits a lasso regression workflow. It mirrors the ridge procedure but uses pure L1 regularization, which can shrink some coefficients all the way to zero.
+Lasso regression also starts from a linear predictor, but replaces the $L_2$ penalty with an $L_1$ penalty,
 
-```{r modeling-lasso, message=TRUE, warning=FALSE}
+$$
+\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \sum_{j=1}^{p} |\beta_j|.
+$$
+
+Because the $L_1$ penalty can drive some coefficients exactly to zero, lasso performs shrinkage and embedded variable selection at the same time. This makes it especially useful when the model may benefit from a sparser representation than the full predictor set.
+
+Lasso was considered because the challenge explicitly invites discussion of feature selection, and lasso provides a principled way to test that idea without dropping predictors manually before modeling. In this notebook, it serves as a regularized linear competitor that can reveal whether a simpler predictive structure improves out-of-sample accuracy.
+
+### 4.5.1) Lasso with normalized predictors
+
+The first lasso variant uses normalized predictors and lets the L1 penalty decide how aggressively coefficients should be shrunk toward zero.
+
+```{r modeling-lasso-normalized, message=TRUE, warning=FALSE}
 # Lasso uses pure L1 regularization and can produce sparse coefficient patterns.
-lasso_workflow <- workflow() |>
+lasso_norm_workflow <- workflow() |>
   add_recipe(normalized_recipe) |>
   add_model(
     linear_reg(penalty = tune(), mixture = 1) |>
@@ -875,43 +1063,107 @@ lasso_grid <- grid_regular(
   levels = 6
 )
 
-# Tune the lasso penalty using cross-validation.
-lasso_tune <- tune_grid(
-  object = lasso_workflow,
+# Tune lasso with normalized predictors using cross-validation.
+lasso_norm_tune <- tune_grid(
+  object = lasso_norm_workflow,
   resamples = folds,
   grid = lasso_grid,
   metrics = metric_set_regression,
   control = control_grid(save_pred = TRUE)
 )
+```
 
-# Finalize the workflow with the penalty value that minimizes RMSE.
-lasso_best_params <- select_best(lasso_tune, metric = "rmse")
+### 4.5.2) Lasso with normalized PCA predictors
 
-lasso_final_workflow <- finalize_workflow(lasso_workflow, lasso_best_params)
+The second lasso variant evaluates whether a reduced PCA representation can outperform the full normalized predictor space under the same L1 regularization logic. The retained PCA dimensionality is fixed in advance using the Kaiser criterion on the standardized training predictors.
 
-lasso_last_fit <- last_fit(
-  lasso_final_workflow,
-  split = data_split,
-  metrics = metric_set_regression
+```{r modeling-lasso-pca, message=TRUE, warning=FALSE}
+# Define the lasso workflow that combines normalization and PCA.
+lasso_pca_workflow <- workflow() |>
+  add_recipe(pca_recipe) |>
+  add_model(
+    linear_reg(penalty = tune(), mixture = 1) |>
+      set_engine("glmnet")
+  )
+
+# Search over a compact penalty grid while keeping the PCA dimensionality fixed.
+lasso_pca_grid <- grid_regular(
+  penalty(),
+  levels = 4
 )
 
-lasso_resample_metrics <- collect_metrics(lasso_tune) |>
-  mutate(model = "lasso")
+# Tune lasso with PCA-based features using cross-validation.
+lasso_pca_tune <- tune_grid(
+  object = lasso_pca_workflow,
+  resamples = folds,
+  grid = lasso_pca_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+```
 
-lasso_holdout_metrics <- collect_metrics(lasso_last_fit) |>
-  mutate(model = "lasso")
+### 4.5.3) Lasso variant selection
 
-# Fit the finalized lasso workflow on the full prepared training data.
-lasso_fitted_workflow <- fit(lasso_final_workflow, data = training_data_model)
+The following chunk compares the lasso variants using cross-validated RMSE and then refits the winning workflow on the full prepared training data. As recommended in *Tidy Modeling with R*, the holdout set is still kept outside the family-selection process.
+
+```{r modeling-lasso-selection, message=TRUE, warning=FALSE}
+# Combine lasso variants into a single resampling summary.
+lasso_variant_resamples <- bind_rows(
+  collect_metrics(lasso_norm_tune) |>
+    mutate(model = "lasso", variant = "normalized"),
+  collect_metrics(lasso_pca_tune) |>
+    mutate(model = "lasso", variant = "pca")
+)
+
+# Rank lasso variants by cross-validated RMSE.
+lasso_variant_leaderboard <- lasso_variant_resamples |>
+  filter(.metric == "rmse") |>
+  group_by(model, variant) |>
+  slice_min(order_by = mean, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(mean) |>
+  select(model, variant, .metric, mean, std_err, .config)
+
+lasso_best_variant_name <- lasso_variant_leaderboard |>
+  slice(1) |>
+  pull(variant)
+
+# Finalize the winning lasso workflow before holdout evaluation.
+if (lasso_best_variant_name == "normalized") {
+  lasso_best_params <- select_best(lasso_norm_tune, metric = "rmse")
+  lasso_best_workflow <- finalize_workflow(lasso_norm_workflow, lasso_best_params)
+} else {
+  lasso_best_params <- select_best(lasso_pca_tune, metric = "rmse")
+  lasso_best_workflow <- finalize_workflow(lasso_pca_workflow, lasso_best_params)
+}
+
+lasso_resample_metrics <- lasso_variant_resamples
+
+# Fit the winning lasso workflow on the full prepared training data.
+lasso_fitted_workflow <- fit(lasso_best_workflow, data = training_data_model)
+
+lasso_variant_leaderboard
 ```
 
 ## 4.6) Elastic Net
 
-The next chunk fits an elastic net workflow. Unlike ridge and lasso, it tunes both the overall shrinkage strength and the balance between L1 and L2 regularization.
+Elastic net combines the ridge and lasso penalties in a single objective,
 
-```{r modeling-elastic-net, message=TRUE, warning=FALSE}
+$$
+\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \left[(1-\alpha)\frac{1}{2}\sum_{j=1}^{p}\beta_j^2 + \alpha \sum_{j=1}^{p}|\beta_j|\right],
+$$
+
+where $\lambda$ controls the overall regularization strength and $\alpha \in [0,1]$ controls the balance between ridge-like and lasso-like behavior. When predictors are correlated, this blended penalty can produce a more stable compromise than either pure ridge or pure lasso alone.
+
+Elastic net was considered because it provides a flexible middle ground between coefficient shrinkage and sparsity. In a multivariate regression challenge like this one, that flexibility is valuable: if the data benefit from some variable selection but also contain correlated predictors, elastic net can adapt more naturally than the pure penalized alternatives.
+
+### 4.6.1) Elastic net with normalized predictors
+
+The first elastic net variant uses normalized predictors and tunes both the penalty magnitude and the balance between L1 and L2 regularization.
+
+```{r modeling-elastic-net-normalized, message=TRUE, warning=FALSE}
 # Elastic net tunes both shrinkage intensity and the blend of L1 and L2 penalties.
-elastic_net_workflow <- workflow() |>
+enet_norm_workflow <- workflow() |>
   add_recipe(normalized_recipe) |>
   add_model(
     linear_reg(penalty = tune(), mixture = tune()) |>
@@ -925,44 +1177,106 @@ elastic_net_grid <- grid_regular(
   levels = 4
 )
 
-# Tune the elastic net hyperparameters using cross-validation.
-elastic_net_tune <- tune_grid(
-  object = elastic_net_workflow,
+# Tune elastic net with normalized predictors using cross-validation.
+enet_norm_tune <- tune_grid(
+  object = enet_norm_workflow,
   resamples = folds,
   grid = elastic_net_grid,
   metrics = metric_set_regression,
   control = control_grid(save_pred = TRUE)
 )
+```
 
-# Finalize the workflow with the hyperparameter combination that minimizes RMSE.
-elastic_net_best_params <- select_best(elastic_net_tune, metric = "rmse")
+### 4.6.2) Elastic net with normalized PCA predictors
 
-elastic_net_final_workflow <- finalize_workflow(
-  elastic_net_workflow,
-  elastic_net_best_params
+The second elastic net variant adds PCA-based feature engineering so the model can be tested on a reduced normalized predictor space. As in the other PCA branches, the retained dimensionality is fixed by the Kaiser criterion after standardization rather than tuned inside resampling.
+
+```{r modeling-elastic-net-pca, message=TRUE, warning=FALSE}
+# Define the elastic net workflow that combines normalization and PCA.
+enet_pca_workflow <- workflow() |>
+  add_recipe(pca_recipe) |>
+  add_model(
+    linear_reg(penalty = tune(), mixture = tune()) |>
+      set_engine("glmnet")
+  )
+
+# Search over a compact penalty-mixture grid while keeping the PCA dimensionality fixed.
+enet_pca_grid <- grid_regular(
+  penalty(),
+  mixture(),
+  levels = 3
 )
 
-elastic_net_last_fit <- last_fit(
-  elastic_net_final_workflow,
-  split = data_split,
-  metrics = metric_set_regression
+# Tune the PCA-based elastic net workflow using cross-validation.
+enet_pca_tune <- tune_grid(
+  object = enet_pca_workflow,
+  resamples = folds,
+  grid = enet_pca_grid,
+  metrics = metric_set_regression,
+  control = control_grid(save_pred = TRUE)
+)
+```
+
+### 4.6.3) Elastic net variant selection
+
+The next chunk compares the elastic net variants by cross-validated RMSE and then fits the best workflow on the full prepared training data. The holdout split is intentionally deferred so the final family choice remains resampling-based.
+
+```{r modeling-elastic-net-selection, message=TRUE, warning=FALSE}
+# Combine elastic net variants into a single resampling summary.
+elastic_net_variant_resamples <- bind_rows(
+  collect_metrics(enet_norm_tune) |>
+    mutate(model = "elastic_net", variant = "normalized"),
+  collect_metrics(enet_pca_tune) |>
+    mutate(model = "elastic_net", variant = "pca")
 )
 
-elastic_net_resample_metrics <- collect_metrics(elastic_net_tune) |>
-  mutate(model = "elastic_net")
+# Rank elastic net variants by cross-validated RMSE.
+elastic_net_variant_leaderboard <- elastic_net_variant_resamples |>
+  filter(.metric == "rmse") |>
+  group_by(model, variant) |>
+  slice_min(order_by = mean, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(mean) |>
+  select(model, variant, .metric, mean, std_err, .config)
 
-elastic_net_holdout_metrics <- collect_metrics(elastic_net_last_fit) |>
-  mutate(model = "elastic_net")
+elastic_net_best_variant_name <- elastic_net_variant_leaderboard |>
+  slice(1) |>
+  pull(variant)
 
-# Fit the finalized elastic net workflow on the full prepared training data.
-elastic_net_fitted_workflow <- fit(elastic_net_final_workflow, data = training_data_model)
+# Finalize the winning elastic net workflow before holdout evaluation.
+if (elastic_net_best_variant_name == "normalized") {
+  elastic_net_best_params <- select_best(enet_norm_tune, metric = "rmse")
+  elastic_net_best_workflow <- finalize_workflow(enet_norm_workflow, elastic_net_best_params)
+} else {
+  elastic_net_best_params <- select_best(enet_pca_tune, metric = "rmse")
+  elastic_net_best_workflow <- finalize_workflow(enet_pca_workflow, elastic_net_best_params)
+}
+
+elastic_net_resample_metrics <- elastic_net_variant_resamples
+
+# Fit the winning elastic net workflow on the full prepared training data.
+elastic_net_fitted_workflow <- fit(elastic_net_best_workflow, data = training_data_model)
+
+elastic_net_variant_leaderboard
 ```
 
 ## 4.7) Random Forest
 
-The following chunk adds a tree-based benchmark that can capture non-linear structure and interactions more flexibly than the linear models. It defines a compact tuning space, evaluates candidate forests, and keeps the best final workflow.
+Random forest is a nonlinear ensemble model that averages the predictions of many decision trees. If $T_b(\mathbf{x})$ denotes the prediction of tree $b$, the forest prediction can be written as
 
-```{r modeling-random-forest, message=TRUE, warning=FALSE}
+$$
+\hat{f}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} T_b(\mathbf{x}),
+$$
+
+where each tree is grown on a bootstrap sample and each split is chosen from a random subset of predictors. In regression settings, the split selection rule is typically based on reducing residual sum of squares within the child nodes, so the ensemble can capture nonlinear patterns and predictor interactions that linear models cannot represent directly.
+
+Random forest was considered because the challenge is predictive in nature and the target may depend on interactions or nonlinear effects that are not well approximated by a purely linear form. It also provides a strong low-preprocessing benchmark: if the signal in the data is more flexible than additive linear structure, random forest is a natural candidate to capture that complexity.
+
+### 4.7.1) Random forest with minimal preprocessing
+
+The random forest family is treated as a methodological exception. According to *Tidy Modeling with R*, tree-based models typically require very little preprocessing, so this notebook does not force additional feature-engineering variants for random forest. Instead, the competition within this family is limited to tuning its own hyperparameters.
+
+```{r modeling-random-forest-base, message=TRUE, warning=FALSE}
 # Define a valid tuning range for the forest hyperparameters given the available predictors.
 random_forest_parameters <- parameters(
   mtry(range = c(1L, max(1L, ncol(train_data) - 1L))),
@@ -998,37 +1312,63 @@ random_forest_tune <- tune_grid(
   metrics = metric_set_regression,
   control = control_grid(save_pred = TRUE)
 )
+```
 
-# Finalize the workflow with the hyperparameters that minimize RMSE.
+### 4.7.2) Random forest variant selection
+
+The following chunk finalizes the tuned random forest and fits the winning tree-based workflow on the full prepared training data. The holdout split is still kept in reserve so that a single final workflow can be validated later with `last_fit()`.
+
+```{r modeling-random-forest-selection, message=TRUE, warning=FALSE}
+# Finalize the random forest workflow with the hyperparameters that minimize RMSE.
 random_forest_best_params <- select_best(random_forest_tune, metric = "rmse")
 
-random_forest_final_workflow <- finalize_workflow(
+random_forest_best_workflow <- finalize_workflow(
   random_forest_workflow,
   random_forest_best_params
 )
 
-random_forest_last_fit <- last_fit(
-  random_forest_final_workflow,
-  split = data_split,
-  metrics = metric_set_regression
-)
+random_forest_best_variant_name <- "minimal_preprocessing"
 
 random_forest_resample_metrics <- collect_metrics(random_forest_tune) |>
-  mutate(model = "random_forest")
+  mutate(model = "random_forest", variant = random_forest_best_variant_name)
 
-random_forest_holdout_metrics <- collect_metrics(random_forest_last_fit) |>
-  mutate(model = "random_forest")
+random_forest_variant_leaderboard <- random_forest_resample_metrics |>
+  filter(.metric == "rmse") |>
+  arrange(mean) |>
+  slice(1) |>
+  select(model, variant, .metric, mean, std_err, .config)
 
 # Fit the finalized forest on the full prepared training data.
-random_forest_fitted_workflow <- fit(random_forest_final_workflow, data = training_data_model)
+random_forest_fitted_workflow <- fit(random_forest_best_workflow, data = training_data_model)
 ```
 
 ## 4.8) Model comparison
 
-The next chunk consolidates the metrics produced by every candidate model, builds an RMSE leaderboard, and selects the workflow that will be used in the deployment section.
+### 4.8.1) Family winners entering the final comparison
+
+The next chunk consolidates the internal leaderboards produced by every model family, assembles `training_results`, creates a cross-validated family ranking, determines `best_model_name`, and maps that winner to both a holdout-validation workflow and a deployment workflow. This follows the *Tidy Modeling with R* pattern in which resampling determines the preferred model family and `last_fit()` is reserved for one final evaluation of the chosen workflow ([workflows](https://www.tmwr.org/workflows.html), [tuning](https://www.tmwr.org/tuning)).
 
 ```{r modeling-comparison}
-# Combine all resample and holdout metrics into a single object for later reporting.
+# Collect the internal variant leaderboards identified inside each model family.
+variant_leaderboards <- bind_rows(
+  ols_variant_leaderboard,
+  ridge_variant_leaderboard,
+  lasso_variant_leaderboard,
+  elastic_net_variant_leaderboard,
+  random_forest_variant_leaderboard
+)
+
+# Extract the best resampling result from each family so the final comparison is CV-based.
+family_cv_leaderboard <- bind_rows(
+  ols_variant_leaderboard |> slice(1),
+  ridge_variant_leaderboard |> slice(1),
+  lasso_variant_leaderboard |> slice(1),
+  elastic_net_variant_leaderboard |> slice(1),
+  random_forest_variant_leaderboard |> slice(1)
+) |>
+  arrange(mean)
+
+# Combine the detailed resample metrics and the family-level CV ranking into a single reporting object.
 training_results <- list(
   resample_metrics = bind_rows(
     ols_resample_metrics,
@@ -1037,36 +1377,37 @@ training_results <- list(
     elastic_net_resample_metrics,
     random_forest_resample_metrics
   ),
-  holdout_metrics = bind_rows(
-    mean_baseline_metrics,
-    ols_holdout_metrics,
-    ridge_holdout_metrics,
-    lasso_holdout_metrics,
-    elastic_net_holdout_metrics,
-    random_forest_holdout_metrics
-  )
+  variant_leaderboards = variant_leaderboards,
+  family_cv_leaderboard = family_cv_leaderboard
 )
 
-# Rank non-baseline models by holdout RMSE so the best workflow can be chosen consistently.
-leaderboard <- training_results$holdout_metrics |>
-  filter(.metric == "rmse", model != "mean_baseline") |>
-  arrange(.estimate) |>
-  select(model, .metric, .estimate, .config)
+# Alias the family-level CV ranking so downstream reporting stays simple.
+leaderboard <- training_results$family_cv_leaderboard
 
 best_model_name <- leaderboard |>
   slice(1) |>
   pull(model)
 
-# Map the best model name back to the fitted workflow object used for final scoring.
+# Keep the selected variant label available for holdout reporting and deployment handoff.
+best_model_variant <- leaderboard |>
+  slice(1) |>
+  pull(variant)
+
+# Map the best family name back to the finalized holdout workflow and the fitted deployment workflow.
 if (best_model_name == "ols") {
+  best_model_holdout_workflow <- ols_best_workflow
   best_model_workflow <- ols_fitted_workflow
 } else if (best_model_name == "ridge") {
+  best_model_holdout_workflow <- ridge_best_workflow
   best_model_workflow <- ridge_fitted_workflow
 } else if (best_model_name == "lasso") {
+  best_model_holdout_workflow <- lasso_best_workflow
   best_model_workflow <- lasso_fitted_workflow
 } else if (best_model_name == "elastic_net") {
+  best_model_holdout_workflow <- elastic_net_best_workflow
   best_model_workflow <- elastic_net_fitted_workflow
 } else {
+  best_model_holdout_workflow <- random_forest_best_workflow
   best_model_workflow <- random_forest_fitted_workflow
 }
 
@@ -1076,26 +1417,182 @@ training_results$best_model_name <- best_model_name
 leaderboard
 ```
 
+### 4.8.2) Final cross-validated ranking
+
+The following figure makes the family ranking easier to interpret by ordering the cross-validated winners from lowest to highest RMSE and visually highlighting the top performer. Because RMSE is the primary selection criterion in this notebook, the model at the top of this chart is the one that wins the final comparison before the holdout set is touched.
+
+```{r modeling-comparison-plot, fig.height=4.5, fig.width=8}
+# Prepare a clean plotting table so the winning family can be highlighted explicitly.
+leaderboard_plot_data <- leaderboard |>
+  mutate(
+    model_label = tools::toTitleCase(gsub("_", " ", model)),
+    highlight = if_else(row_number() == 1, "Winner", "Other finalists")
+  )
+
+# Plot the cross-validated RMSE ranking and emphasize the winner with a contrasting accent color.
+ggplot(
+  leaderboard_plot_data,
+  aes(x = reorder(model_label, mean), y = mean, fill = highlight)
+) +
+  geom_col(width = 0.7) +
+  geom_text(
+    aes(label = sprintf("%.3f", mean)),
+    hjust = -0.15,
+    size = 3.5,
+    color = "#2C3E50"
+  ) +
+  coord_flip(clip = "off") +
+  scale_fill_manual(
+    values = c("Winner" = "#D95F0E", "Other finalists" = "#BFC7CF")
+  ) +
+  expand_limits(y = max(leaderboard_plot_data$mean) * 1.12) +
+  labs(
+    title = "Cross-validated RMSE by winning model family",
+    subtitle = "Lower mean RMSE indicates stronger resampling performance on the training split",
+    x = NULL,
+    y = "Cross-validated RMSE",
+    fill = NULL
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+### 4.8.3) Winning model metrics
+
+Once the cross-validated ranking has identified the winning family, the next chunk uses `last_fit()` a single time on the reserved holdout split. This follows the final-evaluation workflow recommended in *Tidy Modeling with R*: resampling selects the model, and the holdout set is then used once to summarize the predictive performance of the already-chosen winner ([workflows](https://www.tmwr.org/workflows.html), [performance](https://www.tmwr.org/performance)).
+
+```{r winning-model-metrics}
+# Evaluate the selected family on the reserved holdout split only once.
+winning_model_last_fit <- last_fit(
+  best_model_holdout_workflow,
+  split = data_split,
+  metrics = metric_set_regression
+)
+
+winning_model_holdout_metrics <- collect_metrics(winning_model_last_fit) |>
+  mutate(model = best_model_name, variant = best_model_variant)
+
+winning_model_holdout_predictions <- collect_predictions(winning_model_last_fit)
+
+training_results$winning_holdout_metrics <- winning_model_holdout_metrics
+training_results$winning_holdout_predictions <- winning_model_holdout_predictions
+
+# Summarize the winning holdout metrics in a single row for quick reporting.
+winning_model_summary <- training_results$winning_holdout_metrics |>
+  filter(model == best_model_name) |>
+  select(model, variant, .metric, .estimate) |>
+  tidyr::pivot_wider(names_from = .metric, values_from = .estimate) |>
+  select(model, variant, rmse, mae, rsq)
+
+winning_model_summary
+```
+
+The next chunk turns the resampling ranking and the winner holdout table into a compact paragraph so the notebook explains both why the family was selected and how it validated on untouched data.
+
+```{r modeling-comparison-interpretation, results='asis'}
+# Recreate the pretty label helper here so the final selection paragraph is self-contained.
+if (!exists("pretty_model_name")) {
+  pretty_model_name <- function(x) {
+    tools::toTitleCase(gsub("_", " ", x))
+  }
+}
+
+# Gather the winner holdout metrics and the runner-up CV score to summarize the final selection in prose.
+winner_holdout_metrics <- training_results$winning_holdout_metrics |>
+  filter(model == best_model_name)
+
+runner_up_entry <- leaderboard |>
+  slice(2)
+
+winner_holdout_rmse <- winner_holdout_metrics |>
+  filter(.metric == "rmse") |>
+  pull(.estimate)
+
+winner_mae <- winner_holdout_metrics |>
+  filter(.metric == "mae") |>
+  pull(.estimate)
+
+winner_rsquared <- winner_holdout_metrics |>
+  filter(.metric == "rsq") |>
+  pull(.estimate)
+
+runner_up_name <- runner_up_entry |>
+  pull(model)
+
+winner_cv_rmse <- leaderboard |>
+  slice(1) |>
+  pull(mean)
+
+runner_up_cv_rmse <- runner_up_entry |>
+  pull(mean)
+
+winner_gap <- runner_up_cv_rmse - winner_cv_rmse
+
+# Print a compact interpretation anchored first on resampling and then on the final holdout validation.
+cat(
+  paste0(
+    pretty_model_name(best_model_name),
+    " won the final comparison because it achieved the lowest cross-validated RMSE (",
+    sprintf("%.3f", winner_cv_rmse),
+    "), which is the primary ranking criterion used in this notebook. ",
+    "The runner-up was ",
+    pretty_model_name(runner_up_name),
+    " with a cross-validated RMSE of ",
+    sprintf("%.3f", runner_up_cv_rmse),
+    ", so the selected winner improved the main resampling metric by ",
+    sprintf("%.3f", winner_gap),
+    " RMSE points before the holdout set was used. Following the final-evaluation workflow recommended in *Tidy Modeling with R*, the reserved holdout split was then used once through `last_fit()`. ",
+    "The winner table above shows that the deployed variant, `",
+    best_model_variant,
+    "`, recorded a holdout RMSE of ",
+    sprintf("%.3f", winner_holdout_rmse),
+    ", an MAE of ",
+    sprintf("%.3f", winner_mae),
+    " and an R-squared of ",
+    sprintf("%.3f", winner_rsquared),
+    " on unseen data. Taken together, these results indicate that the deployed workflow was selected by resampling and then validated on an untouched holdout set rather than being chosen because of that holdout result."
+  )
+)
+```
+
+The next section complements this winner summary with direct visual inspection of the deployed workflow. In this way, the notebook shows not only which family won the comparison, but also how its predictions align with the observed holdout targets under the same regression-focused evaluation logic.
+
+### 4.8.4) Deployment handoff
+
+The final subsection of Section 4 makes the deployment handoff explicit. Once the cross-validated winner has been validated on the holdout set, `best_model_workflow` becomes the single fitted workflow object passed into Section 6 for blind test scoring. The next chunk reports that handoff directly so the selected workflow is easy to trace from model comparison into final prediction export.
+
+```{r deployment-handoff-summary}
+# Report the workflow that will be passed into the deployment section.
+deployment_handoff_summary <- tibble(
+  best_model_name = best_model_name,
+  variant = best_model_variant,
+  handoff = "workflow selected for blind test scoring"
+)
+
+deployment_handoff_summary
+```
+
 # 5) Evaluation
 
-Evaluation focuses on generalization rather than in-sample fit. Because the challenge target contains irreducible noise and the final estimates still depend on a single holdout split, every result in this section should be interpreted as a model-selection aid rather than as a definitive population benchmark.
+Evaluation focuses on generalization rather than in-sample fit. Because the challenge target contains irreducible noise and the final estimates still depend on finite resamples plus a single reserved holdout split, every result in this section should be interpreted as a model-selection aid rather than as a definitive population benchmark.
+
+Because this is a regression challenge with a continuous target, the notebook evaluates workflows with regression metrics and regression-style diagnostics rather than classification tools such as ROC curves, AUC, confusion matrices, sensitivity, or specificity. Those diagnostics are appropriate for categorical outcomes, but they would not provide a meaningful common scale for the models compared here.
 
 ## 5.1) Comparative metrics
 
-The next chunk prints the holdout metrics for every candidate model. This is the main table for comparing out-of-sample performance under the current data conditions.
+The next chunk prints the family-level cross-validated comparison that now drives final model selection. This follows the empirical validation emphasis in *Tidy Modeling with R*, where model comparison is based on data not used to fit the corresponding resample-specific models and the test set remains reserved for a final check of the chosen winner ([performance](https://www.tmwr.org/performance), [resampling](https://www.tmwr.org/resampling.html)).
 
 ```{r evaluation-metrics}
-# Order the holdout metrics so model-by-model comparisons are easy to scan.
-training_results$holdout_metrics |>
-  arrange(model, .metric)
+# Show the cross-validated RMSE ranking used to choose the final model family.
+training_results$family_cv_leaderboard
 ```
 
-This companion chunk reports the cross-validated metrics collected during resampling. It helps distinguish average resampling behavior from the final holdout estimates.
+This companion chunk reports the detailed cross-validated metrics collected during resampling. It acts as the more granular reference behind the family-level ranking shown above.
 
 ```{r evaluation-resample-metrics}
 # Show the cross-validated metrics gathered during model tuning and resampling.
 training_results$resample_metrics |>
-  arrange(model, .metric)
+  arrange(model, variant, .metric, mean)
 ```
 
 ## 5.2) OLS diagnostics and MCO principles
@@ -1111,6 +1608,12 @@ ols_model <- lm(target ~ ., data = training_data_model)
 # Add fitted values and residual diagnostics needed for later plots.
 ols_diagnostics <- augment(ols_model)
 
+# Keep a shared axis range so predicted-versus-actual comparisons use the same scale.
+ols_predicted_actual_limits <- range(
+  c(ols_diagnostics$target, ols_diagnostics$.fitted),
+  na.rm = TRUE
+)
+
 # Compute variance inflation factors as a descriptive check on multicollinearity.
 ols_vif <- tibble(
   feature = names(car::vif(ols_model)),
@@ -1122,7 +1625,28 @@ head(ols_diagnostics)
 ols_vif
 ```
 
-### 5.2.1) Residuals vs fitted
+### 5.2.1) Predicted vs actual
+
+The next chunk compares the observed target values against the fitted OLS values. Points closer to the 45-degree diagonal indicate tighter in-sample agreement, but this figure should still be read as a descriptive OLS diagnostic rather than as the notebook's final generalization criterion.
+
+```{r ols-predicted-actual, fig.height=4, fig.width=8}
+# Compare observed and fitted OLS values on a shared scale to assess in-sample alignment.
+ggplot(ols_diagnostics, aes(x = target, y = .fitted)) +
+  geom_point(alpha = 0.45, color = "#2C3E50") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "#D95F0E") +
+  coord_equal(
+    xlim = ols_predicted_actual_limits,
+    ylim = ols_predicted_actual_limits
+  ) +
+  labs(
+    title = "OLS predicted vs actual values",
+    x = "Observed target",
+    y = "Fitted target"
+  ) +
+  theme_minimal()
+```
+
+### 5.2.2) Residuals vs fitted
 
 The next chunk draws the residuals-versus-fitted plot. This diagnostic is used to look for patterns that may suggest non-linearity or changing residual variance.
 
@@ -1135,10 +1659,11 @@ ggplot(ols_diagnostics, aes(x = .fitted, y = .resid)) +
     title = "OLS residuals vs fitted values",
     x = "Fitted values",
     y = "Residuals"
-  )
+  ) +
+  theme_minimal()
 ```
 
-### 5.2.2) Normal Q-Q
+### 5.2.3) Normal Q-Q
 
 The following chunk produces a normal Q-Q plot for standardized residuals. This plot helps assess whether the residual distribution departs strongly from normality.
 
@@ -1151,10 +1676,11 @@ ggplot(ols_diagnostics, aes(sample = .std.resid)) +
     title = "Normal Q-Q plot for standardized residuals",
     x = "Theoretical quantiles",
     y = "Standardized residuals"
-  )
+  ) +
+  theme_minimal()
 ```
 
-### 5.2.3) Scale-location style diagnostic
+### 5.2.4) Scale-location style diagnostic
 
 The next chunk creates a scale-location style plot. Its purpose is to inspect whether residual spread changes systematically across the range of fitted values.
 
@@ -1169,7 +1695,140 @@ ggplot(
     title = "Scale-location diagnostic",
     x = "Fitted values",
     y = "Sqrt(|standardized residuals|)"
+  ) +
+  theme_minimal()
+```
+
+## 5.3) Final winning model diagnostics
+
+The final subsection shifts attention from the OLS reference model to the workflow actually selected for deployment. The next chunk gathers the winning model's holdout predictions from the single `last_fit()` call, computes residual-based summaries on unseen data, and extracts variable importance when the deployed workflow is a random forest.
+
+```{r winning-model-diagnostics-build}
+# Reuse the winner label in the plots below so the deployed family is easy to identify.
+if (!exists("pretty_model_name")) {
+  pretty_model_name <- function(x) {
+    tools::toTitleCase(gsub("_", " ", x))
+  }
+}
+
+winning_model_label <- pretty_model_name(best_model_name)
+
+# Reuse the single holdout-evaluation predictions gathered for the winning workflow.
+winning_model_holdout_predictions <- training_results$winning_holdout_predictions
+
+winning_model_diagnostics <- winning_model_holdout_predictions |>
+  mutate(
+    truth = .data[["target"]],
+    residual = truth - .pred,
+    abs_error = abs(residual)
   )
+
+winning_model_prediction_limits <- range(
+  c(winning_model_diagnostics$truth, winning_model_diagnostics$.pred),
+  na.rm = TRUE
+)
+
+winning_model_error_summary <- tibble(
+  model = best_model_name,
+  variant = winning_model_summary |> pull(variant),
+  mean_absolute_error = mean(winning_model_diagnostics$abs_error),
+  median_absolute_error = median(winning_model_diagnostics$abs_error),
+  max_absolute_error = max(winning_model_diagnostics$abs_error)
+)
+
+# Extract impurity-based importance only when the deployed workflow is a random forest.
+if (best_model_name == "random_forest") {
+  rf_importance_vector <- workflows::extract_fit_parsnip(random_forest_fitted_workflow)$fit$variable.importance
+
+  winning_model_importance <- tibble(
+    feature = names(rf_importance_vector),
+    importance = as.numeric(rf_importance_vector)
+  ) |>
+    arrange(desc(importance)) |>
+    slice_head(n = 10)
+} else {
+  winning_model_importance <- tibble(
+    feature = character(),
+    importance = numeric()
+  )
+}
+
+head(winning_model_diagnostics)
+winning_model_error_summary
+```
+
+### 5.3.1) Predicted vs actual for the winning model
+
+The next chart extends the ranking table with a direct out-of-sample view of the deployed workflow. Points closer to the 45-degree reference line indicate tighter agreement between the holdout observations and the predictions produced by the final selected model.
+
+```{r winning-model-predicted-actual, fig.height=4, fig.width=8}
+# Compare observed and predicted holdout values for the deployed workflow on a shared scale.
+ggplot(winning_model_diagnostics, aes(x = truth, y = .pred)) +
+  geom_point(alpha = 0.45, color = "#2C3E50") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "#D95F0E") +
+  coord_equal(
+    xlim = winning_model_prediction_limits,
+    ylim = winning_model_prediction_limits
+  ) +
+  labs(
+    title = paste(winning_model_label, "predicted vs actual on holdout data"),
+    subtitle = "Closer proximity to the diagonal indicates stronger out-of-sample alignment",
+    x = "Observed target",
+    y = "Predicted target"
+  ) +
+  theme_minimal()
+```
+
+### 5.3.2) Error profile of the winning model
+
+The next summary and figure complement the winner table with a more concrete view of the model's errors on the reserved holdout set. Since `RMSE` remains the decisive metric, this subsection is interpretative: it helps show whether the deployed workflow's errors stay concentrated within a relatively narrow range or are dominated by a small number of larger misses.
+
+```{r winning-model-error-summary}
+# Report a compact summary of the absolute errors made by the deployed workflow.
+winning_model_error_summary
+```
+
+```{r winning-model-error-profile, fig.height=4, fig.width=8}
+# Plot the distribution of absolute holdout errors and mark the mean absolute error.
+ggplot(winning_model_diagnostics, aes(x = abs_error)) +
+  geom_histogram(bins = 20, fill = "#D95F0E", color = "white", alpha = 0.9) +
+  geom_vline(
+    xintercept = winning_model_error_summary$mean_absolute_error,
+    linetype = "dashed",
+    color = "#2C3E50"
+  ) +
+  labs(
+    title = paste(winning_model_label, "absolute error profile on holdout data"),
+    subtitle = "The dashed line marks the mean absolute error across the reserved assessment rows",
+    x = "Absolute error",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+### 5.3.3) Variable importance for the winning random forest
+
+If the deployed workflow is a random forest, the next figure visualizes the top impurity-based importance scores extracted from the fitted forest. This chart is interpretative rather than decisive: it helps identify which predictors contributed most to the winning tree ensemble, but it is not used as the selection criterion in the notebook.
+
+```{r winning-random-forest-importance, fig.height=4.5, fig.width=8}
+# Plot the top variable-importance scores only when the deployed workflow is a random forest.
+if (best_model_name == "random_forest") {
+  ggplot(
+    winning_model_importance,
+    aes(x = reorder(feature, importance), y = importance)
+  ) +
+    geom_col(fill = "#D95F0E", width = 0.7) +
+    coord_flip() +
+    labs(
+      title = "Winning random forest variable importance",
+      subtitle = "Impurity-based importance from the fitted deployment workflow",
+      x = NULL,
+      y = "Importance"
+    ) +
+    theme_minimal()
+} else {
+  cat("Variable importance is omitted here because the deployed workflow is not a random forest.")
+}
 ```
 
 # 6) Deployment
