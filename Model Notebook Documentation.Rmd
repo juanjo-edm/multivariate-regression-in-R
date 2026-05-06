@@ -28,7 +28,8 @@ The following chunk bootstraps the software environment for the notebook. It che
 # Define the package set once so the notebook can reproduce itself on a clean machine.
 required_packages <- c(
   "tidyverse", "tidymodels", "conflicted",
-  "DiagrammeR", "printtree", "glmnet", "ranger", "car"
+  "DiagrammeR", "printtree", "glmnet", "ranger", "car",
+  "skimr", "naniar", "visdat"
 )
 
 missing_required_packages <- required_packages[
@@ -48,6 +49,9 @@ library(printtree)
 library(glmnet)
 library(ranger)
 library(car)
+library(skimr)
+library(naniar)
+library(visdat)
 library(broom)
 library(recipes)
 library(rsample)
@@ -153,23 +157,22 @@ The goal of this section is not to fit models yet, but to understand whether the
 
 ## 2.1) Import data
 
-The first decision in this challenge is to import all columns as character strings. This is important because the files use a non-standard numeric representation with multiple dots inside several values, so reading them directly as numeric would hide data quality problems.
+The first decision in this challenge is to import all columns as character strings. Even though the delivered files now follow a standard comma-separated format with ordinary decimal notation, starting from character input keeps the validation step explicit and makes the conversion logic easy to audit.
 
-The next chunk imports both raw files as character data. This preserves the original strings exactly as delivered so the numeric recovery rule can be applied transparently in the following steps.
+The next chunk imports both raw files as character data. This preserves the original strings exactly as delivered so the notebook can first validate the file structure and then convert the columns to numeric in a transparent way.
 
 ```{r import-data}
-# Keep all fields as character on import so malformed numeric strings are not silently coerced.
-training_data_raw <- read_delim(
+# Keep all fields as character on import so the raw delivered format is audited first.
+training_data_raw <- read_csv(
   "data/raw/training_data.csv",
-  delim = ";",
   col_types = cols(.default = col_character()),
   trim_ws = TRUE,
   na = c("", "NA")
 )
 
-blind_test_data_raw <- read_delim(
+# Apply the same raw import strategy to the blind test file for consistency.
+blind_test_data_raw <- read_csv(
   "data/raw/blind_test_data.csv",
-  delim = ";",
   col_types = cols(.default = col_character()),
   trim_ws = TRUE,
   na = c("", "NA")
@@ -202,49 +205,37 @@ structure_check <- tibble(
 structure_check
 ```
 
-The number of columns matches the challenge specification, but the local training file contains fewer rows than expected. This is a relevant finding because it changes the effective sample size available for model training and suggests a file integrity issue that must be documented before preprocessing.
+The local files match the challenge specification exactly: the training file contains 800 observations plus the target column, and the blind test file contains 200 observations with the same 20 predictors. This confirms that the notebook can proceed without any file-level correction step.
 
 ## 2.3) Type audit and numeric recovery
 
-Before modeling, the dataset must be converted to a usable numeric format. A close inspection of the raw files shows two different conventions:
+Before modeling, the dataset must be converted to a usable numeric format. A close inspection of the raw files shows that the values already follow ordinary decimal notation, so the numeric conversion can remain simple and direct.
 
-1.  Standard decimals such as `0.6535918186439443`.
-2.  Values written with several dots, such as `4.324.759.536.476.850`.
-
-For this notebook, multi-dot values are interpreted as numbers with dots used as thousand separators when the pattern matches repeated groups of three digits. Under that rule, `4.324.759.536.476.850` is converted to `4324759536476850`, while values such as `0.6535918186439443` are preserved as ordinary decimals.
-
-The next chunk illustrates that parsing rule on a small example table and then applies the same conversion logic to every column in both datasets. Keeping the rule inside the notebook makes the recovery step easy to audit.
+The next chunk illustrates that conversion rule on a small example table and then applies the same logic to every column in both datasets. Keeping the conversion step inside the notebook makes the transition from raw input to model-ready numeric data easy to audit.
 
 ```{r numeric-parser}
 
-# Detect numbers that look like repeated groups of three digits separated by dots.
-thousands_pattern <- "^[+-]?[0-9]{1,3}(\\.[0-9]{3})+$"
-
-# Create simple examples so the parsing rule is visible before it is applied to the full data.
+# Create simple examples so the numeric conversion rule is visible before it is applied to the full data.
 parser_examples <- tibble(
   raw_value = c(
-    "4.324.759.536.476.850",
-    "621.368.316.595.869",
     "0.6535918186439443",
     "12.5",
+    "432.4759536476851",
     "",
     NA_character_
   )
 ) |>
   mutate(
-    treated_as_grouped_thousands = str_detect(str_trim(raw_value), thousands_pattern),
     parsed_value = case_when(
       is.na(raw_value) ~ NA_real_,
       str_trim(raw_value) == "" ~ NA_real_,
-      str_detect(str_trim(raw_value), thousands_pattern) ~
-        suppressWarnings(as.numeric(str_replace_all(str_trim(raw_value), stringr::fixed("."), ""))),
       TRUE ~ suppressWarnings(as.numeric(str_trim(raw_value)))
     )
   )
 
 parser_examples
 
-# Apply the grouped-thousands rule column by column to the training data.
+# Convert every training column from character to numeric using direct decimal parsing.
 training_data <- training_data_raw |>
   mutate(
     across(
@@ -252,8 +243,6 @@ training_data <- training_data_raw |>
       ~ case_when(
         is.na(.) ~ NA_real_,
         str_trim(.) == "" ~ NA_real_,
-        str_detect(str_trim(.), thousands_pattern) ~
-          suppressWarnings(as.numeric(str_replace_all(str_trim(.), stringr::fixed("."), ""))),
         TRUE ~ suppressWarnings(as.numeric(str_trim(.)))
       )
     )
@@ -267,18 +256,16 @@ blind_test_data <- blind_test_data_raw |>
       ~ case_when(
         is.na(.) ~ NA_real_,
         str_trim(.) == "" ~ NA_real_,
-        str_detect(str_trim(.), thousands_pattern) ~
-          suppressWarnings(as.numeric(str_replace_all(str_trim(.), stringr::fixed("."), ""))),
         TRUE ~ suppressWarnings(as.numeric(str_trim(.)))
       )
     )
   )
 ```
 
-The following chunk confirms that the conversion succeeded. It checks whether all columns are numeric and reports how many missing cells remain in each dataset after parsing.
+The following chunk confirms that the conversion succeeded. It checks whether all columns are numeric and reports how many missing cells remain in each dataset after conversion.
 
 ```{r type-check}
-# Verify that both parsed tables are numeric and summarize their remaining missingness.
+# Verify that both converted tables are numeric and summarize their remaining missingness.
 type_summary <- tibble(
   dataset = c("training_data", "blind_test_data"),
   all_columns_numeric = c(
@@ -298,12 +285,12 @@ After this conversion, both tables become fully numeric, which is a necessary co
 
 ## 2.4) Data quality findings
 
-In this dataset there are two especially relevant integrity checks: incomplete rows and duplicated observations.
+In this dataset there are two especially relevant integrity checks: missing values and duplicated observations. The section is intentionally divided into two complementary parts: a compact integrity summary followed by a richer profiling block that makes the dataset structure visually explicit.
 
-The next chunk quantifies those integrity issues directly. It shows where missing values are concentrated, identifies incomplete training rows, and reports duplicate counts for both files.
+The next chunk quantifies those integrity indicators directly. It shows whether missing values exist by column, identifies incomplete training rows if any are present, and reports duplicate counts for both files.
 
 ```{r data-quality}
-# Count missing values by column so the location of corruption is explicit.
+# Count missing values by column so file integrity remains explicit.
 missing_by_column <- training_data |>
   summarise(across(everything(), ~ sum(is.na(.x)))) |>
   pivot_longer(
@@ -336,14 +323,28 @@ missing_by_column
 incomplete_training_rows
 ```
 
-The main issue is concentrated in the last row of the training file, which is incomplete from `feature_11` onward and also has a missing target. This observation should not be used for supervised training and will need to be excluded in the preparation phase. The blind test file, by contrast, does not show missing values.
+The next chunk complements the integrity summary with specialized profiling tools. Together, these outputs provide a broader view of the dataset by combining a compact statistical summary, a visual audit of variable classes, an explicit missingness map, and a per-variable missing-value table.
 
-For the remainder of the exploratory analysis, a complete-case version of the training data is used only to avoid descriptive summaries being distorted by that truncated row.
+```{r data-quality-profile, fig.height=10, fig.width=12}
+# Summarize the full dataset structure and the distribution of values by variable type.
+skim(training_data)
+
+# Display variable classes and missingness cues in a compact visual matrix.
+vis_dat(training_data)
+
+# Render the global missingness pattern so gaps would be visible immediately if they existed.
+vis_miss(training_data)
+
+# Report missing-value counts and percentages by variable in tabular form.
+miss_var_summary(training_data)
+```
+
+The quality check shows that both files are complete and do not contain duplicated observations. The additional profiling output is still valuable because it documents those clean conditions explicitly and leaves the notebook ready for future file versions that might include missingness or type irregularities.
 
 The following chunk creates that complete-case training table and stores the predictor names used repeatedly in later summaries and graphics.
 
 ```{r complete-case-data}
-# Drop incomplete training rows so one corrupted observation does not distort the exploratory analysis.
+# Create a complete-case training table as a defensive step for later reusable analysis.
 training_data_complete <- training_data |>
   drop_na()
 
@@ -415,6 +416,36 @@ ggplot(training_data_complete, aes(y = target)) +
     x = NULL,
     y = "target"
   )
+```
+
+Additionally, the violin plot helps reveal characteristics of the distribution that may not be immediately visible in a standard boxplot, such as multimodality, asymmetry, or irregular concentration patterns. When combined with the embedded boxplot and jittered observations, the visualization provides a more comprehensive understanding of the variable’s central tendency, dispersion, and potential outliers, supporting a more robust exploratory data analysis process.
+
+```{r target-violin_plot, fig.height=5, fig.width=9}
+
+ggplot(training_data_complete, aes(x = "", y = target)) +
+  geom_violin(
+    fill = "#7FCDBB",
+    alpha = 0.6,
+    color = "gray30"
+  ) +
+  geom_boxplot(
+    width = 0.12,
+    fill = "white",
+    outlier.color = "red",
+    alpha = 0.8
+  ) +
+  geom_jitter(
+    width = 0.05,
+    alpha = 0.2,
+    size = 1
+  ) +
+  labs(
+    title = "Distribution of the target variable",
+    x = NULL,
+    y = "target"
+  ) +
+  theme_minimal()
+
 ```
 
 ## 2.7) Distribution of the predictors
@@ -583,9 +614,9 @@ At the end of Data Understanding, we can summarize what has and has not been lea
 **What can already be supported from the data**
 
 1.  **Variation in** $y$ and in the $x$ variables: the target and all predictors vary in the sample, so estimation is possible.
-2.  **Numeric measurement level:** after parsing, all predictors and the target behave as continuous numeric variables, which is compatible with MCO.
+2.  **Numeric measurement level:** after conversion from the raw character import, all predictors and the target behave as continuous numeric variables, which is compatible with MCO.
 3.  **Absence of perfect multicollinearity:** the correlation matrix does not reveal redundant columns or exact linear duplication among predictors.
-4.  **Potential linear signal:** scatterplots show that a linear approximation can at least be explored, although the marginal relationships are weak.
+4.  **Potential linear signal:** scatterplots show that a linear approximation can be explored, with the strongest marginal signal concentrated in a subset of predictors rather than spread uniformly across all variables.
 
 **What cannot be confirmed yet in this phase**
 
@@ -596,32 +627,31 @@ At the end of Data Understanding, we can summarize what has and has not been lea
 
 **Main findings from Data Understanding**
 
-1.  The local training file contains fewer rows than expected and includes one truncated observation with missing values from `feature_11` to `target`.
-2.  Both files required a custom numeric parsing step before any statistical analysis, distinguishing thousand-grouped strings from true decimals.
+1.  The local training and blind test files match the challenge specification in rows, columns, and target presence.
+2.  Both files can be converted directly to numeric values after the raw character import, with no missing cells introduced during conversion.
 3.  The target and predictors are continuous and show substantial dispersion.
 4.  Several predictors are right-skewed and live on different scales.
-5.  Individual predictors show only weak marginal linear association with the target.
+5.  The strongest marginal linear associations with the target are concentrated in predictors such as `feature_2`, `feature_13`, `feature_9`, and `feature_11`.
 6.  There is no sign of perfect multicollinearity at the descriptive stage.
 
 # 3) Data Preparation
 
-This phase transforms the findings from Data Understanding into a model-ready dataset. Because the current files are corrupted, the preparation logic is intentionally simple and transparent so that the same notebook can be rerun quickly when the corrected CSV files arrive.
+This phase transforms the findings from Data Understanding into a model-ready dataset. Because the current files already satisfy the structural checks, the preparation logic can stay intentionally simple and transparent while remaining reusable for future file versions.
 
 ## 3.1) Preparing model-ready datasets
 
 The preparation stage follows four practical rules:
 
 1.  Keep all original predictors.
-2.  Preserve the parsed numeric representation from Section 2.
-3.  Exclude incomplete rows only from the supervised training dataset.
+2.  Preserve the numeric representation obtained in Section 2.
+3.  Keep all supervised training rows because the delivered file does not contain incomplete observations.
 4.  Keep the blind test dataset intact so it remains ready for final scoring.
 
 The following chunk translates those rules into model-facing datasets and companion checks. It also prepares quick summaries for row counts, predictor alignment, and simple variance screening.
 
 ```{r data-preparation-pipeline}
-# Keep only complete observations in the supervised training data.
-training_data_model <- training_data |>
-  drop_na()
+# Keep the full supervised training data because the integrity checks found no missing rows.
+training_data_model <- training_data
 
 # Preserve the full blind test set so it remains ready for final scoring.
 blind_test_data_model <- blind_test_data
@@ -669,7 +699,7 @@ quality_summary
 missing_by_column
 ```
 
-These checks are intentionally kept visible in the notebook because the project is operating under known data corruption. The notebook should remain honest about that condition while still producing a reusable workflow.
+These checks are intentionally kept visible in the notebook because they document that the delivered files satisfy the expected structure and can move into modeling without manual repair.
 
 ## 3.3) Predictor alignment and variance screening
 
@@ -683,7 +713,7 @@ predictor_sds |>
   arrange(sd)
 ```
 
-No predictor is removed manually here. Instead, zero-variance handling is delegated to the modeling recipe so the same code can react cleanly when the correct files are swapped in.
+No predictor is removed manually here. Instead, zero-variance handling is delegated to the modeling recipe so the same code can react cleanly if a future file version changes the predictor behavior.
 
 # 4) Modeling
 
@@ -1048,7 +1078,7 @@ leaderboard
 
 # 5) Evaluation
 
-Evaluation focuses on generalization rather than in-sample fit. Because the available data are corrupted, every result in this section should be interpreted as provisional, but the evaluation framework itself is reusable.
+Evaluation focuses on generalization rather than in-sample fit. Because the challenge target contains irreducible noise and the final estimates still depend on a single holdout split, every result in this section should be interpreted as a model-selection aid rather than as a definitive population benchmark.
 
 ## 5.1) Comparative metrics
 
@@ -1164,6 +1194,4 @@ write_csv(blind_test_predictions, "output/blind_test_predictions.csv")
 head(blind_test_predictions)
 ```
 
-The exported file is now saved as `output/blind_test_predictions.csv`, and it is ready for submission after checking that the corrected raw data have been swapped in.
-
-
+The exported file is now saved as `output/blind_test_predictions.csv`, and it is ready for submission after confirming that the required one-column format has been preserved.
