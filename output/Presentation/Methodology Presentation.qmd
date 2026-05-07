@@ -1,6 +1,6 @@
 ---
 title: "Multivariate Regression Methodology"
-subtitle: "Wizeline DS Hiring Challenge"
+subtitle: "Multivariate Regression Challenge"
 author: "Juan Jose Echeverry"
 format:
   revealjs:
