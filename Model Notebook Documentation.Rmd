@@ -142,6 +142,14 @@ The tree shown below should therefore be read as a conceptual map of the noteboo
 
 The same sequential organization also clarifies how model selection is handled from start to finish. Section 4 first evaluates alternative variants inside each model family, then stores those internal summaries in `variant_leaderboards`. After that, Section 4.8 compares only the family winners through the cross-validated ranking stored in `family_cv_leaderboard`, promotes the top family to `best_model_name`, and maps that result to `best_model_workflow` for final blind-test scoring. Only after that family-level choice has already been made does the notebook use `last_fit()` once on the reserved holdout split to populate `training_results$winning_holdout_metrics`. In this way, the notebook keeps feature engineering and tuning decisions inside the modeling stage while preserving a single documented handoff into deployment.
 
+## d) References
+
+1.  [Tidy Modeling with R](https://www.tmwr.org)
+
+2.  [**R for Data Science**](https://r4ds.had.co.nz/?utm_source=chatgpt.com)
+
+3.  [AnalizaR Datos Políticos](https://andrescruz.org/libroadp/)
+
 # 1) Business Understanding
 
 ## 1.1) Objective
@@ -829,15 +837,11 @@ The model variants compared below follow two methodological rules. First, no sub
 
 Ordinary Least Squares (OLS) models the target as a linear combination of the predictors,
 
-$$
-y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} + \varepsilon_i,
-$$
+$$y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} + \varepsilon_i,$$
 
 and estimates the coefficient vector by minimizing the residual sum of squares,
 
-$$
-\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2.
-$$
+$$\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2.$$
 
 This makes OLS the most direct linear benchmark in the notebook: it preserves a fully interpretable relationship between predictors and response, and it also provides the classical regression reference used later for residual diagnostics and assumption checks.
 
@@ -923,9 +927,7 @@ ols_variant_leaderboard
 
 Ridge regression keeps the same linear predictor as OLS but adds an $L_2$ penalty that shrinks coefficients toward zero,
 
-$$
-\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \sum_{j=1}^{p} \beta_j^2,
-$$
+$$\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \sum_{j=1}^{p} \beta_j^2,$$
 
 where $\lambda \ge 0$ controls the strength of regularization. The penalty does not remove predictors entirely, but it reduces coefficient magnitude and can stabilize estimation when predictors are correlated or when the unregularized linear fit is too variable.
 
@@ -1036,9 +1038,7 @@ ridge_variant_leaderboard
 
 Lasso regression also starts from a linear predictor, but replaces the $L_2$ penalty with an $L_1$ penalty,
 
-$$
-\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \sum_{j=1}^{p} |\beta_j|.
-$$
+$$\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \sum_{j=1}^{p} |\beta_j|.$$
 
 Because the $L_1$ penalty can drive some coefficients exactly to zero, lasso performs shrinkage and embedded variable selection at the same time. This makes it especially useful when the model may benefit from a sparser representation than the full predictor set.
 
@@ -1149,9 +1149,7 @@ lasso_variant_leaderboard
 
 Elastic net combines the ridge and lasso penalties in a single objective,
 
-$$
-\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \left[(1-\alpha)\frac{1}{2}\sum_{j=1}^{p}\beta_j^2 + \alpha \sum_{j=1}^{p}|\beta_j|\right],
-$$
+$$\min_{\beta_0,\boldsymbol{\beta}} \sum_{i=1}^{n} \left(y_i - \beta_0 - \mathbf{x}_i^\top \boldsymbol{\beta}\right)^2 + \lambda \left[(1-\alpha)\frac{1}{2}\sum_{j=1}^{p}\beta_j^2 + \alpha \sum_{j=1}^{p}|\beta_j|\right],$$
 
 where $\lambda$ controls the overall regularization strength and $\alpha \in [0,1]$ controls the balance between ridge-like and lasso-like behavior. When predictors are correlated, this blended penalty can produce a more stable compromise than either pure ridge or pure lasso alone.
 
@@ -1264,9 +1262,7 @@ elastic_net_variant_leaderboard
 
 Random forest is a nonlinear ensemble model that averages the predictions of many decision trees. If $T_b(\mathbf{x})$ denotes the prediction of tree $b$, the forest prediction can be written as
 
-$$
-\hat{f}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} T_b(\mathbf{x}),
-$$
+$$\hat{f}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} T_b(\mathbf{x}),$$
 
 where each tree is grown on a bootstrap sample and each split is chosen from a random subset of predictors. In regression settings, the split selection rule is typically based on reducing residual sum of squares within the child nodes, so the ensemble can capture nonlinear patterns and predictor interactions that linear models cannot represent directly.
 
