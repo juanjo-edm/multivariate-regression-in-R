@@ -1,0 +1,275 @@
+---
+title: "Multivariate Regression in R"
+output:
+  github_document:
+    toc: true
+    toc_depth: 3
+---
+
+# Overview
+
+This repository contains a complete solution for a **multivariate regression** problem in R.
+
+The project is designed around a single, auditable analytical workflow:
+
+- read the raw challenge files,
+- validate the data structure and quality,
+- explore the predictors and the target,
+- compare several regression model families,
+- select the best workflow using cross-validation,
+- validate the winner on a reserved holdout set, and
+- generate final predictions for the blind test dataset.
+
+The main analytical artifact is the notebook [`Model Notebook Documentation.Rmd`](Model%20Notebook%20Documentation.Rmd), which documents the full methodology from raw inputs to final output.
+
+# Project Goal
+
+The challenge provides:
+
+- a training dataset with `800` observations,
+- `20` numerical predictor columns named `feature_0` to `feature_19`,
+- a continuous target column named `target`, and
+- a blind test dataset with `200` new observations and the same `20` predictors.
+
+The objective of the project is to train a regression model that can predict the continuous target and export the required blind-test predictions as a CSV file with a single column named `target_pred`.
+
+# Repository Structure
+
+The repository is intentionally simple and centered on the notebook workflow.
+
+```text
+.
+├── Model Notebook Documentation.Rmd
+├── Model Notebook Documentation.nb.html
+├── README.Rmd
+├── data/
+│   └── raw/
+│       ├── training_data.csv
+│       └── blind_test_data.csv
+├── documents/
+│   └── References/
+├── figure/
+├── output/
+│   ├── blind_test_predictions.csv
+│   └── Presentation/
+│       ├── Methodology Presentation.qmd
+│       ├── Methodology Presentation.html
+│       ├── presentation.css
+│       └── assets/
+├── renv/
+├── renv.lock
+└── multivariate regression in R.Rproj
+```
+
+# Main Files
+
+## Core analysis
+
+- [`Model Notebook Documentation.Rmd`](Model%20Notebook%20Documentation.Rmd): full source notebook with methodology, exploration, modeling, evaluation, and deployment.
+- [`Model Notebook Documentation.nb.html`](Model%20Notebook%20Documentation.nb.html): rendered notebook with tables, plots, and results.
+
+## Data
+
+- [`data/raw/training_data.csv`](data/raw/training_data.csv): labeled training dataset.
+- [`data/raw/blind_test_data.csv`](data/raw/blind_test_data.csv): unlabeled blind test dataset.
+
+## Deliverables
+
+- [`output/blind_test_predictions.csv`](output/blind_test_predictions.csv): final predictions in submission-ready format.
+- [`output/Presentation/Methodology Presentation.qmd`](output/Presentation/Methodology%20Presentation.qmd): presentation source.
+- [`output/Presentation/Methodology Presentation.html`](output/Presentation/Methodology%20Presentation.html): rendered methodology presentation.
+
+
+
+# Analytical Workflow
+
+The project follows the **CRISP-DM** logic implemented in the notebook:
+
+1. **Business Understanding**
+2. **Data Understanding**
+3. **Data Preparation**
+4. **Modeling**
+5. **Evaluation**
+6. **Deployment**
+
+## 1. Business Understanding
+
+The notebook starts from the challenge requirements and translates them into a regression workflow with explicit attention to:
+
+- preprocessing decisions,
+- feature-selection justification,
+- model comparison,
+- overfitting control, and
+- blind-test deployment.
+
+## 2. Data Understanding
+
+The raw CSV files are first imported as character data so the conversion process remains explicit and auditable.
+
+The notebook then verifies:
+
+- expected row counts,
+- expected feature counts,
+- target-column presence in the training set only,
+- successful numeric recovery,
+- missing values,
+- duplicate rows, and
+- broad distributional behavior of both target and predictors.
+
+## 3. Data Preparation
+
+Preparation is intentionally light because the local files are clean:
+
+- no missing-value imputation was necessary,
+- no manual row removal was necessary,
+- no manual predictor dropping was necessary, and
+- all predictors were retained for modeling.
+
+Instead of using ad hoc manual filtering, preprocessing is handled consistently through `recipes` inside the modeling workflow.
+
+## 4. Modeling
+
+The notebook compares the following model families:
+
+- **OLS**
+- **Ridge**
+- **Lasso**
+- **Elastic Net**
+- **Random Forest**
+
+Different workflow variants are tested where appropriate:
+
+- original predictors,
+- normalized predictors, and
+- PCA-based predictors.
+
+### Validation design
+
+The notebook uses:
+
+- an `80/20` train-test split,
+- `5-fold` cross-validation on the training split,
+- stratification on the target,
+- `RMSE`, `MAE`, and `R²` as the main regression metrics.
+
+The key methodological rule is that the **family winner is selected by cross-validation first**, and the holdout set is used only once afterward through `last_fit()`.
+
+## 5. Evaluation
+
+Evaluation is done at two levels:
+
+- **cross-validated model comparison** for selection, and
+- **holdout validation** for final confirmation of the selected workflow.
+
+The notebook also includes:
+
+- OLS residual diagnostics,
+- predicted-vs-actual plots,
+- error-profile plots for the winning model, and
+- random-forest variable importance when applicable.
+
+## 6. Deployment
+
+Once the best model is selected and validated, the blind test dataset is scored and the notebook exports the final submission file:
+
+- `output/blind_test_predictions.csv`
+
+# Final Model Choice
+
+According to the rendered notebook, the selected model family was:
+
+- **Random Forest**
+- Variant: `minimal_preprocessing`
+
+## Cross-validated family ranking
+
+| Model | Variant | CV RMSE |
+|---|---|---:|
+| Random Forest | minimal_preprocessing | 2.615919 |
+| Lasso | normalized | 2.840765 |
+| Elastic Net | normalized | 2.842309 |
+| OLS | raw | 2.845045 |
+| Ridge | normalized | 2.848861 |
+
+## Holdout metrics for the selected winner
+
+| Metric | Value |
+|---|---:|
+| RMSE | 2.523354 |
+| MAE | 1.975047 |
+| R² | 0.7449495 |
+
+These results indicate that the random forest workflow generalized better than the linear and regularized alternatives tested in the notebook.
+
+# Reproducibility
+
+The repository includes `renv` support:
+
+- [`.Rprofile`](.Rprofile) activates `renv`
+- [`renv.lock`](renv.lock) records the package state used for the project
+
+This means the project can be restored on another machine using the locked package environment.
+
+## Recommended workflow
+
+From the project root in R or RStudio:
+
+```r
+renv::restore()
+```
+
+Then render the notebook:
+
+```r
+rmarkdown::render("Model Notebook Documentation.Rmd")
+```
+
+If needed, the Quarto presentation can be rendered with:
+
+```bash
+quarto render "output/Presentation/Methodology Presentation.qmd" --to revealjs
+```
+
+# Outputs
+
+## Notebook output
+
+The rendered notebook contains:
+
+- all analytical explanations,
+- tables and plots,
+- model comparison outputs,
+- holdout evaluation results, and
+- deployment confirmation.
+
+## Presentation output
+
+The `output/Presentation/` folder contains a presentation version of the project methodology intended for communication and walkthrough purposes.
+
+## Submission output
+
+The final CSV used for challenge submission is:
+
+- [`output/blind_test_predictions.csv`](output/blind_test_predictions.csv)
+
+# Suggested Reading Order
+
+For someone new to the repository, the best reading order is:
+
+1. Read this `README.Rmd`
+2. Review the challenge brief in `documents/`
+3. Open `Model Notebook Documentation.Rmd`
+4. Inspect the rendered notebook `Model Notebook Documentation.nb.html`
+5. Review the final presentation in `output/Presentation/`
+6. Verify the exported prediction file in `output/`
+
+# Notes
+
+- The notebook is the main source of truth for the project.
+- The repository was intentionally kept lightweight and notebook-centered.
+- The presentation was built as a communication artifact and does not replace the analytical notebook.
+- The `figure/` directory contains generated plots used by the notebook and later reused by the presentation.
+
+# Author
+
+Juan Jose Echeverry
