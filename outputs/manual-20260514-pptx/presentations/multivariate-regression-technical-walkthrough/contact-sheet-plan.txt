@@ -1,0 +1,22 @@
+Macro-layout rhythm:
+- Cover with metric rail
+- Editorial thesis slide
+- Six-step workflow map
+- Input contract table
+- Parser and validation split diagram
+- Data-quality matrix
+- Figure-led evidence slide
+- Recipe lane map
+- Model-family comparison table
+- Tuning flow
+- Ranking bar chart
+- Diagnostics grid
+- OLS/MCO assumption matrix
+- CI/CD architecture map
+- Closing synthesis
+
+Hard gates:
+- No three consecutive slides share the same macro layout.
+- Every slide has a claim title and one proof object.
+- All diagnostic plots are paired with an explicit interpretation.
+- Deployment slide must show the full proposed production path.

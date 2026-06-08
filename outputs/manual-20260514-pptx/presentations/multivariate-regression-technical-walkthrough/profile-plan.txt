@@ -1,0 +1,23 @@
+Task mode: create
+Primary deck-profile: engineering-platform
+Secondary profile gate: appendix-heavy
+
+Audience: technical interview panel
+Language: English
+Output: editable PPTX, 28 slides
+
+Required proof objects:
+- End-to-end modeling workflow map
+- Data validation and preparation proof
+- Cross-validation and model-selection proof
+- OLS/MCO diagnostic proof from Section 5.2
+- Blind-test scoring and deployment architecture proof
+
+Source and asset requirements:
+- Use Model Notebook Documentation.Rmd as the source of truth.
+- Reuse generated notebook figures from figure/.
+- Use editable artifact-tool primitives for workflow, assumption, model, and deployment diagrams.
+
+Known missing inputs:
+- No external visual template or official brand assets were supplied.
+- No model rerun is required; existing notebook metrics are accepted as source truth.

@@ -1,0 +1,359 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/zrp30e",
+    "id": "zrp30e",
+    "slide": 22,
+    "layoutId": "5df662c1-f897-4071-8439-b5b731026644",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Aptos",
+      "Aptos Display"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "5df662c1-f897-4071-8439-b5b731026644",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/onyd0z61",
+      "id": "1",
+      "name": "background",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#16232E",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/z25kb6xk",
+      "id": "2",
+      "bbox": [
+        68,
+        86,
+        300,
+        24
+      ],
+      "geometry": "rect",
+      "text": "OLS / MCO VALIDATION",
+      "textPreview": "OLS / MCO VALIDATION",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "fontSize": 12,
+        "typeface": "Aptos",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "OLS / MCO VALIDATION"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "OLS / MCO VALIDATION",
+          "runs": [
+            {
+              "index": 1,
+              "text": "OLS / MCO VALIDATION",
+              "fontSize": 12,
+              "typeface": "Aptos",
+              "color": "#F5B78F",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6hcrmhk3",
+      "id": "3",
+      "bbox": [
+        68,
+        126,
+        48,
+        4
+      ],
+      "geometry": "rect",
+      "fillColor": "#D95F0E",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dg7adsji",
+      "id": "4",
+      "bbox": [
+        68,
+        170,
+        830,
+        110
+      ],
+      "geometry": "rect",
+      "text": "OLS did not win, but it remains the diagnostic reference.",
+      "textPreview": "OLS did not win, but it remains the diagnostic reference.",
+      "resolvedFontSize": 44,
+      "resolvedTextStyle": {
+        "fontSize": 44,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "OLS did not win, but it remains the"
+          },
+          {
+            "index": 2,
+            "text": "diagnostic reference."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "OLS did not win, but it remains the diagnostic reference.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "OLS did not win, but it remains the diagnostic reference.",
+              "fontSize": 44,
+              "typeface": "Aptos Display",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ovahoza1",
+      "id": "5",
+      "bbox": [
+        72,
+        304,
+        720,
+        78
+      ],
+      "geometry": "rect",
+      "text": "Section 5.2 validates the classical regression principles that can be inspected from this dataset.",
+      "textPreview": "Section 5.2 validates the classical regression principles that can be inspected from this dataset.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "fontSize": 20,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Section 5.2 validates the classical regression principles that can be inspected"
+          },
+          {
+            "index": 2,
+            "text": "from this dataset."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Section 5.2 validates the classical regression principles that can be inspected from this dataset.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Section 5.2 validates the classical regression principles that can be inspected from this dataset.",
+              "fontSize": 20,
+              "typeface": "Aptos",
+              "color": "#D7DEE8"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/vahoza1g",
+      "id": "6",
+      "name": "source-footer",
+      "bbox": [
+        54,
+        674,
+        520,
+        20
+      ],
+      "geometry": "rect",
+      "text": "Source: Model Notebook Documentation.Rmd",
+      "textPreview": "Source: Model Notebook Documentation.Rmd",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Source: Model Notebook Documentation.Rmd"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Source: Model Notebook Documentation.Rmd",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Source: Model Notebook Documentation.Rmd",
+              "fontSize": 11,
+              "typeface": "Aptos",
+              "color": "#D7DEE8"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6tovahoz",
+      "id": "7",
+      "name": "page-marker",
+      "bbox": [
+        1198,
+        674,
+        38,
+        20
+      ],
+      "geometry": "rect",
+      "text": "22",
+      "textPreview": "22",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "fontSize": 12,
+        "typeface": "Aptos",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "22"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "22",
+          "runs": [
+            {
+              "index": 1,
+              "text": "22",
+              "fontSize": 12,
+              "typeface": "Aptos",
+              "color": "#D7DEE8"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

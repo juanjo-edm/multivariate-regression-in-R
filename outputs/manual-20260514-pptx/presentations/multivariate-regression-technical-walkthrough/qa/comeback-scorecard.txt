@@ -1,0 +1,31 @@
+Comeback scorecard for multivariate-regression-technical-walkthrough.pptx
+
+Profile gates:
+- Audience: technical interview panel
+- Language: English
+- Source of truth: notebook and existing figure/ assets
+- Required inclusions: Section 5.2 OLS/MCO validation and Section 6.2 deployment proposal
+- Final output: editable PPTX in output/Presentation/Power Point/
+
+Scores:
+- Narrative force: 5/5
+- Project specificity: 5/5
+- Pacing and section rhythm: 4/5
+- Whitespace discipline: 4/5
+- Chart and proof clarity: 4/5
+- Typography hierarchy: 4/5
+- Visual restraint: 5/5
+- Technical precision: 5/5
+- End-to-end coherence: 5/5
+
+Total: 41/45
+
+QA evidence:
+- Rendered 28 slide previews and contact sheet.
+- Layout quality checker completed with 0 errors and 56 non-blocking warnings.
+- Final PPTX archive contains 28 slide XML files.
+- Text verification found required terms: OLS, MCO, target_pred, VIF, Random Forest, holdout, and Cloud Run.
+
+Notes:
+- The deck keeps diagrams editable where they explain process, OLS/MCO assumptions, model comparison, and CI/CD deployment.
+- Existing notebook figures are reused as proof objects for distributions, diagnostics, residual behavior, feature importance, and error profile.

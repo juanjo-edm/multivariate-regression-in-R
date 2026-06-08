@@ -1,0 +1,35 @@
+Thesis:
+The project is an auditable regression workflow that validates clean data, compares linear and nonlinear model families with resampling, selects Random Forest by cross-validated RMSE, validates it on holdout data, and exports blind-test predictions in the required format.
+
+One-line arc:
+Raw CSVs -> explicit validation -> defensible preprocessing -> fair model comparison -> OLS/MCO diagnostics -> Random Forest deployment -> production-ready next step.
+
+Slide list:
+01 Cover: a technical walkthrough from raw files to blind-test predictions.
+02 Executive thesis: the model was selected by resampling, not by holdout shopping.
+03 Challenge objective: the deliverable is a one-column prediction CSV.
+04 Methodology map: CRISP-DM keeps the workflow auditable.
+05 Data contract: 800 labeled rows and 200 blind-test rows share 20 predictors.
+06 Raw import: character-first reading makes parsing auditable.
+07 Structural validation: local files match expected rows, predictors, and target presence.
+08 Data quality: missingness and duplicates are zero.
+09 Exploratory signal: target and predictors show usable predictive structure.
+10 Preparation rules: minimal repair, full feature retention.
+11 Feature alignment: train and blind-test columns match exactly.
+12 Recipe strategy: preprocessing is model-specific and workflow-managed.
+13 Feature selection rationale: PCA and lasso test reduction without manual dropping.
+14 Validation design: train/test split plus cross-validation protects generalization.
+15 Candidate families: OLS, ridge, lasso, elastic net, random forest.
+16 Tuning logic: hyperparameters are selected inside resampling.
+17 Selection rule: RMSE is the single primary criterion.
+18 Modeling handoff: family winners enter one CV-based ranking.
+19 Final ranking: Random Forest wins on CV RMSE.
+20 Winning workflow: nonlinear ensemble captures interactions better.
+21 Holdout and error profile: final validation supports the winner.
+22 OLS/MCO bridge: OLS remains the diagnostic reference.
+23 Preliminary OLS principles: what was supported before fitting.
+24 Post-fit diagnostics: residual and fitted-value plots validate model behavior.
+25 Caveats and VIF: exogeneity and independence remain assumptions; VIF is low.
+26 Blind-test scoring: final workflow writes target_pred.
+27 Deployment proposal: RStudio/Plumber or Shiny -> GitHub -> Docker -> Cloud Build -> Artifact Registry -> Cloud Run.
+28 Closing: the project is defendable, reproducible, and ready for operationalization.

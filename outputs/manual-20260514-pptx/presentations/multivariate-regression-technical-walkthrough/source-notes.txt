@@ -1,0 +1,33 @@
+Primary source: Model Notebook Documentation.Rmd
+Supporting source: output/Presentation/Methodology Presentation.qmd
+Generated figures: figure/*.png
+Final CSV: output/blind_test_predictions.csv
+
+Key metrics used in the deck:
+- Training rows: 800
+- Blind-test rows: 200
+- Predictors: 20 numerical features
+- Target column: target
+- Missing values: 0 in training and blind test
+- Duplicate rows: 0 in training and blind test
+- Split: 80/20 train-test split
+- Resampling: 5-fold cross-validation on the training split
+- Random Forest CV RMSE: 2.615919
+- Lasso CV RMSE: 2.840765
+- Elastic Net CV RMSE: 2.842309
+- OLS CV RMSE: 2.845045
+- Ridge CV RMSE: 2.848861
+- Winning model: Random Forest, minimal_preprocessing
+- Winning RF hyperparameters: mtry 20, min_n 2, trees 300
+- Holdout RMSE: 2.523354
+- Holdout MAE: 1.975047
+- Holdout R-squared: 0.7449495
+- Mean absolute error: 1.975047
+- Median absolute error: 1.670238
+- Max absolute error: 8.361734
+- Max VIF in OLS diagnostics: 1.040143
+- Strongest marginal correlations: feature_2, feature_13, feature_9, feature_11
+
+Identity asset policy:
+- No company logos or pseudo-brand marks are used.
+- The deck relies on technical diagrams, metrics, and notebook-generated figures.

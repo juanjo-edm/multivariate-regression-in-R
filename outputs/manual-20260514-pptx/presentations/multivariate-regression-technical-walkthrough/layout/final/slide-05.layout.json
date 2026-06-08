@@ -1,0 +1,933 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/2ymsb3",
+    "id": "2ymsb3",
+    "slide": 5,
+    "layoutId": "5df662c1-f897-4071-8439-b5b731026644",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Aptos",
+      "Aptos Display",
+      "Aptos Mono"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "5df662c1-f897-4071-8439-b5b731026644",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kzupwb2h",
+      "id": "1",
+      "name": "background",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F7F4EE",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/re1w7mp0",
+      "id": "2",
+      "name": "kicker-marker",
+      "bbox": [
+        58,
+        49,
+        8,
+        8
+      ],
+      "geometry": "rect",
+      "fillColor": "#D95F0E",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2t83itgf",
+      "id": "3",
+      "name": "kicker-label",
+      "bbox": [
+        72,
+        42,
+        260,
+        22
+      ],
+      "geometry": "rect",
+      "text": "DATA CONTRACT",
+      "textPreview": "DATA CONTRACT",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "fontSize": 12,
+        "typeface": "Aptos",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "DATA CONTRACT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "DATA CONTRACT",
+          "runs": [
+            {
+              "index": 1,
+              "text": "DATA CONTRACT",
+              "fontSize": 12,
+              "typeface": "Aptos",
+              "color": "#D95F0E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9w3m94fu",
+      "id": "4",
+      "name": "kicker-rule",
+      "bbox": [
+        58,
+        72,
+        36,
+        4
+      ],
+      "geometry": "rect",
+      "fillColor": "#D95F0E",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kb6xkf6d",
+      "id": "5",
+      "name": "claim-title",
+      "bbox": [
+        58,
+        84,
+        820,
+        72
+      ],
+      "geometry": "rect",
+      "text": "Two CSV files define a compact supervised regression problem.",
+      "textPreview": "Two CSV files define a compact supervised regression problem.",
+      "resolvedFontSize": 32,
+      "resolvedTextStyle": {
+        "fontSize": 32,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Two CSV files define a compact supervised"
+          },
+          {
+            "index": 2,
+            "text": "regression problem."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Two CSV files define a compact supervised regression problem.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Two CSV files define a compact supervised regression problem.",
+              "fontSize": 32,
+              "typeface": "Aptos Display",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rqd4vmtw",
+      "id": "6",
+      "name": "subtitle",
+      "bbox": [
+        58,
+        174,
+        760,
+        46
+      ],
+      "geometry": "rect",
+      "text": "The blind test has the same 20 feature columns and no target.",
+      "textPreview": "The blind test has the same 20 feature columns and no target.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The blind test has the same 20 feature columns and no target."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The blind test has the same 20 feature columns and no target.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "The blind test has the same 20 feature columns and no target.",
+              "fontSize": 16,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/25kb6xkf",
+      "id": "7",
+      "name": "source-footer",
+      "bbox": [
+        54,
+        674,
+        520,
+        20
+      ],
+      "geometry": "rect",
+      "text": "Source: Model Notebook Documentation.Rmd",
+      "textPreview": "Source: Model Notebook Documentation.Rmd",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Source: Model Notebook Documentation.Rmd"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Source: Model Notebook Documentation.Rmd",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Source: Model Notebook Documentation.Rmd",
+              "fontSize": 11,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/94fu18jq",
+      "id": "8",
+      "name": "page-marker",
+      "bbox": [
+        1198,
+        674,
+        38,
+        20
+      ],
+      "geometry": "rect",
+      "text": "05",
+      "textPreview": "05",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "fontSize": 12,
+        "typeface": "Aptos",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "05"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "05",
+          "runs": [
+            {
+              "index": 1,
+              "text": "05",
+              "fontSize": 12,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kjm1cfa9",
+      "id": "9",
+      "name": "metric-training observations",
+      "bbox": [
+        96,
+        250,
+        190,
+        100
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D9D0C2",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mlkjm1cf",
+      "id": "10",
+      "bbox": [
+        114,
+        266,
+        154,
+        36
+      ],
+      "geometry": "rect",
+      "text": "800",
+      "textPreview": "800",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "fontSize": 28,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "800"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "800",
+          "runs": [
+            {
+              "index": 1,
+              "text": "800",
+              "fontSize": 28,
+              "typeface": "Aptos Display",
+              "color": "#D95F0E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/f6dcbulw",
+      "id": "11",
+      "bbox": [
+        114,
+        308,
+        154,
+        30
+      ],
+      "geometry": "rect",
+      "text": "training observations",
+      "textPreview": "training observations",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "training observations"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "training observations",
+          "runs": [
+            {
+              "index": 1,
+              "text": "training observations",
+              "fontSize": 13,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4r65wjud",
+      "id": "12",
+      "name": "metric-blind observations",
+      "bbox": [
+        318,
+        250,
+        190,
+        100
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D9D0C2",
+      "lineWidth": 1
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xc3ylc7u",
+      "id": "13",
+      "bbox": [
+        336,
+        266,
+        154,
+        36
+      ],
+      "geometry": "rect",
+      "text": "200",
+      "textPreview": "200",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "fontSize": 28,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "200"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "200",
+          "runs": [
+            {
+              "index": 1,
+              "text": "200",
+              "fontSize": 28,
+              "typeface": "Aptos Display",
+              "color": "#D95F0E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mtwra5gb",
+      "id": "14",
+      "bbox": [
+        336,
+        308,
+        154,
+        30
+      ],
+      "geometry": "rect",
+      "text": "blind observations",
+      "textPreview": "blind observations",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "blind observations"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "blind observations",
+          "runs": [
+            {
+              "index": 1,
+              "text": "blind observations",
+              "fontSize": 13,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fepkzupw",
+      "id": "15",
+      "name": "metric-numeric predictors",
+      "bbox": [
+        540,
+        250,
+        190,
+        100
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D9D0C2",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4zidonyd",
+      "id": "16",
+      "bbox": [
+        558,
+        266,
+        154,
+        36
+      ],
+      "geometry": "rect",
+      "text": "20",
+      "textPreview": "20",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "fontSize": 28,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "20"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "20",
+          "runs": [
+            {
+              "index": 1,
+              "text": "20",
+              "fontSize": 28,
+              "typeface": "Aptos Display",
+              "color": "#D95F0E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xkf6dcbu",
+      "id": "17",
+      "bbox": [
+        558,
+        308,
+        154,
+        30
+      ],
+      "geometry": "rect",
+      "text": "numeric predictors",
+      "textPreview": "numeric predictors",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "numeric predictors"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "numeric predictors",
+          "runs": [
+            {
+              "index": 1,
+              "text": "numeric predictors",
+              "fontSize": 13,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qxs72x4n",
+      "id": "18",
+      "name": "metric-target columns",
+      "bbox": [
+        762,
+        250,
+        190,
+        100
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D9D0C2",
+      "lineWidth": 1
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fil0rqd4",
+      "id": "19",
+      "bbox": [
+        780,
+        266,
+        154,
+        36
+      ],
+      "geometry": "rect",
+      "text": "1 / 0",
+      "textPreview": "1 / 0",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "fontSize": 28,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "1 / 0"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "1 / 0",
+          "runs": [
+            {
+              "index": 1,
+              "text": "1 / 0",
+              "fontSize": 28,
+              "typeface": "Aptos Display",
+              "color": "#D95F0E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7ed8bat4",
+      "id": "20",
+      "bbox": [
+        780,
+        308,
+        154,
+        30
+      ],
+      "geometry": "rect",
+      "text": "target columns",
+      "textPreview": "target columns",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "target columns"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "target columns",
+          "runs": [
+            {
+              "index": 1,
+              "text": "target columns",
+              "fontSize": 13,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/itgfmlkj",
+      "id": "21",
+      "bbox": [
+        116,
+        420,
+        1040,
+        92
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D9D0C2",
+      "lineWidth": 1
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pkzupwb2",
+      "id": "22",
+      "bbox": [
+        154,
+        442,
+        960,
+        52
+      ],
+      "geometry": "rect",
+      "text": "training_data.csv = feature_0 ... feature_19 + target\nblind_test_data.csv = feature_0 ... feature_19",
+      "textPreview": "training_data.csv = feature_0 ... feature_19 + target | blind_test_data.csv = feature_0 ... feature_19",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "Aptos Mono",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "training_data.csv = feature_0 ... feature_19 + target"
+          },
+          {
+            "index": 2,
+            "text": "blind_test_data.csv = feature_0 ... feature_19"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "training_data.csv = feature_0 ... feature_19 + target",
+          "runs": [
+            {
+              "index": 1,
+              "text": "training_data.csv = feature_0 ... feature_19 + target",
+              "fontSize": 21,
+              "typeface": "Aptos Mono",
+              "color": "#16232E"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "blind_test_data.csv = feature_0 ... feature_19",
+          "runs": [
+            {
+              "index": 1,
+              "text": "blind_test_data.csv = feature_0 ... feature_19",
+              "fontSize": 21,
+              "typeface": "Aptos Mono",
+              "color": "#16232E"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

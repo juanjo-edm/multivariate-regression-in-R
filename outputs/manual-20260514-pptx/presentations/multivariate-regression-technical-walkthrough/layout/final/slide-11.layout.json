@@ -1,0 +1,785 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/7ii7kd",
+    "id": "7ii7kd",
+    "slide": 11,
+    "layoutId": "5df662c1-f897-4071-8439-b5b731026644",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Aptos",
+      "Aptos Display"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "5df662c1-f897-4071-8439-b5b731026644",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "1da8b202-4e9a-4e0f-b62f-11ffb76d5385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/r2p8nqxs",
+      "id": "1",
+      "name": "background",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F7F4EE",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kjm1cfa9",
+      "id": "2",
+      "name": "kicker-marker",
+      "bbox": [
+        58,
+        49,
+        8,
+        8
+      ],
+      "geometry": "rect",
+      "fillColor": "#D95F0E",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/94fu18jq",
+      "id": "3",
+      "name": "kicker-label",
+      "bbox": [
+        72,
+        42,
+        260,
+        22
+      ],
+      "geometry": "rect",
+      "text": "FEATURE ALIGNMENT",
+      "textPreview": "FEATURE ALIGNMENT",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "fontSize": 12,
+        "typeface": "Aptos",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "FEATURE ALIGNMENT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "FEATURE ALIGNMENT",
+          "runs": [
+            {
+              "index": 1,
+              "text": "FEATURE ALIGNMENT",
+              "fontSize": 12,
+              "typeface": "Aptos",
+              "color": "#D95F0E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2p8nqxs7",
+      "id": "4",
+      "name": "kicker-rule",
+      "bbox": [
+        58,
+        72,
+        36,
+        4
+      ],
+      "geometry": "rect",
+      "fillColor": "#D95F0E",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ra5gbq1o",
+      "id": "5",
+      "name": "claim-title",
+      "bbox": [
+        58,
+        84,
+        820,
+        72
+      ],
+      "geometry": "rect",
+      "text": "Train and blind-test predictors line up exactly before scoring.",
+      "textPreview": "Train and blind-test predictors line up exactly before scoring.",
+      "resolvedFontSize": 32,
+      "resolvedTextStyle": {
+        "fontSize": 32,
+        "typeface": "Aptos Display",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Train and blind-test predictors line up exactly before"
+          },
+          {
+            "index": 2,
+            "text": "scoring."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Train and blind-test predictors line up exactly before scoring.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Train and blind-test predictors line up exactly before scoring.",
+              "fontSize": 32,
+              "typeface": "Aptos Display",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gvy90je9",
+      "id": "6",
+      "name": "subtitle",
+      "bbox": [
+        58,
+        174,
+        760,
+        46
+      ],
+      "geometry": "rect",
+      "text": "The deployment workflow can safely predict on the blind-test table.",
+      "textPreview": "The deployment workflow can safely predict on the blind-test table.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The deployment workflow can safely predict on the blind-test table."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The deployment workflow can safely predict on the blind-test table.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "The deployment workflow can safely predict on the blind-test table.",
+              "fontSize": 16,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9gr2p8nq",
+      "id": "7",
+      "name": "source-footer",
+      "bbox": [
+        54,
+        674,
+        520,
+        20
+      ],
+      "geometry": "rect",
+      "text": "Source: Model Notebook Documentation.Rmd",
+      "textPreview": "Source: Model Notebook Documentation.Rmd",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "Aptos",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Source: Model Notebook Documentation.Rmd"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Source: Model Notebook Documentation.Rmd",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Source: Model Notebook Documentation.Rmd",
+              "fontSize": 11,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2t83itgf",
+      "id": "8",
+      "name": "page-marker",
+      "bbox": [
+        1198,
+        674,
+        38,
+        20
+      ],
+      "geometry": "rect",
+      "text": "11",
+      "textPreview": "11",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "fontSize": 12,
+        "typeface": "Aptos",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "11"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "11",
+          "runs": [
+            {
+              "index": 1,
+              "text": "11",
+              "fontSize": 12,
+              "typeface": "Aptos",
+              "color": "#667085"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/re1w7mp0",
+      "id": "9",
+      "name": "node-training_data_model\n20 predictors + target",
+      "bbox": [
+        180,
+        300,
+        260,
+        120
+      ],
+      "geometry": "rect",
+      "fillColor": "#E8EEF6",
+      "lineColor": "#2166AC",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/bulwval8",
+      "id": "10",
+      "bbox": [
+        194,
+        316,
+        232,
+        92
+      ],
+      "geometry": "rect",
+      "text": "training_data_model\n20 predictors + target",
+      "textPreview": "training_data_model | 20 predictors + target",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "Aptos",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "training_data_model"
+          },
+          {
+            "index": 2,
+            "text": "20 predictors + target"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "training_data_model",
+          "runs": [
+            {
+              "index": 1,
+              "text": "training_data_model",
+              "fontSize": 15,
+              "typeface": "Aptos",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "20 predictors + target",
+          "runs": [
+            {
+              "index": 1,
+              "text": "20 predictors + target",
+              "fontSize": 15,
+              "typeface": "Aptos",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/i9s36hcr",
+      "id": "11",
+      "name": "node-identical feature names\nsame order and count",
+      "bbox": [
+        510,
+        300,
+        260,
+        120
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#D9D0C2",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/p0bi9s36",
+      "id": "12",
+      "bbox": [
+        524,
+        316,
+        232,
+        92
+      ],
+      "geometry": "rect",
+      "text": "identical feature names\nsame order and count",
+      "textPreview": "identical feature names | same order and count",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "Aptos",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "identical feature names"
+          },
+          {
+            "index": 2,
+            "text": "same order and count"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "identical feature names",
+          "runs": [
+            {
+              "index": 1,
+              "text": "identical feature names",
+              "fontSize": 15,
+              "typeface": "Aptos",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "same order and count",
+          "runs": [
+            {
+              "index": 1,
+              "text": "same order and count",
+              "fontSize": 15,
+              "typeface": "Aptos",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0fepkzup",
+      "id": "13",
+      "name": "node-blind_test_data_model\n20 predictors",
+      "bbox": [
+        840,
+        300,
+        260,
+        120
+      ],
+      "geometry": "rect",
+      "fillColor": "#EAF3EC",
+      "lineColor": "#2D6A4F",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/bi9s36hc",
+      "id": "14",
+      "bbox": [
+        854,
+        316,
+        232,
+        92
+      ],
+      "geometry": "rect",
+      "text": "blind_test_data_model\n20 predictors",
+      "textPreview": "blind_test_data_model | 20 predictors",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "Aptos",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "blind_test_data_model"
+          },
+          {
+            "index": 2,
+            "text": "20 predictors"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "blind_test_data_model",
+          "runs": [
+            {
+              "index": 1,
+              "text": "blind_test_data_model",
+              "fontSize": 15,
+              "typeface": "Aptos",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "20 predictors",
+          "runs": [
+            {
+              "index": 1,
+              "text": "20 predictors",
+              "fontSize": 15,
+              "typeface": "Aptos",
+              "color": "#16232E",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ixczed8v",
+      "id": "15",
+      "bbox": [
+        456,
+        344,
+        42,
+        24
+      ],
+      "geometry": "rect",
+      "text": "->",
+      "textPreview": "->",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "Aptos",
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "->"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "->",
+          "runs": [
+            {
+              "index": 1,
+              "text": "->",
+              "fontSize": 18,
+              "typeface": "Aptos",
+              "color": "#D95F0E"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tovahoza",
+      "id": "16",
+      "bbox": [
+        786,
+        344,
+        42,
+        24
+      ],
+      "geometry": "rect",
+      "text": "->",
+      "textPreview": "->",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "Aptos",
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "->"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "->",
+          "runs": [
+            {
+              "index": 1,
+              "text": "->",
+              "fontSize": 18,
+              "typeface": "Aptos",
+              "color": "#D95F0E"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/032lszqt",
+      "id": "17",
+      "bbox": [
+        190,
+        494,
+        900,
+        36
+      ],
+      "geometry": "rect",
+      "text": "This alignment is the quiet guardrail that prevents scoring-time schema mismatch.",
+      "textPreview": "This alignment is the quiet guardrail that prevents scoring-time schema mismatch.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "fontSize": 20,
+        "typeface": "Aptos",
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "This alignment is the quiet guardrail that prevents scoring-time schema mismatch."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "This alignment is the quiet guardrail that prevents scoring-time schema mismatch.",
+          "runs": [
+            {
+              "index": 1,
+              "text": "This alignment is the quiet guardrail that prevents scoring-time schema mismatch.",
+              "fontSize": 20,
+              "typeface": "Aptos",
+              "color": "#2C3E50"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "training_rows": 800,
+    "blind_rows": 200,
+    "predictors": 20,
+    "missing_training_rows": 0,
+    "missing_blind_rows": 0,
+    "duplicate_training_rows": 0,
+    "duplicate_blind_rows": 0,
+    "holdout_rmse": 2.523354,
+    "holdout_mae": 1.975047,
+    "holdout_rsq": 0.7449495,
+    "mean_absolute_error": 1.975047,
+    "median_absolute_error": 1.670238,
+    "max_absolute_error": 8.361734,
+    "max_vif": 1.040143
+  },
+  "model_ranking": [
+    { "model": "Random Forest", "variant": "minimal_preprocessing", "cv_rmse": 2.615919 },
+    { "model": "Lasso", "variant": "normalized", "cv_rmse": 2.840765 },
+    { "model": "Elastic Net", "variant": "normalized", "cv_rmse": 2.842309 },
+    { "model": "OLS", "variant": "raw", "cv_rmse": 2.845045 },
+    { "model": "Ridge", "variant": "normalized", "cv_rmse": 2.848861 }
+  ],
+  "top_correlations": [
+    { "feature": "feature_2", "correlation": 0.5517672784 },
+    { "feature": "feature_13", "correlation": 0.4046966326 },
+    { "feature": "feature_9", "correlation": 0.3619417998 },
+    { "feature": "feature_11", "correlation": 0.3228021537 }
+  ]
+}
